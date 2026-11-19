@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Practice Studio</title>
+<meta name="description" content="Acoustic guitar practice: tuner, chord library, metronome and a beginner lesson path.">
+<meta name="theme-color" content="#111614">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column of instrument panels — tuner first (you always tune first), then chords, rhythm, lesson path. */
+:root {
+  --bg: #eef1ef; --panel: #ffffff; --ink: #18211e; --muted: #5b6863; --line: #d3dad6;
+  --brass: #9a6b16; --brass-soft: #f3e6c8; --good: #217a4b; --warn: #b5482a; --fret: #b9c2bd;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111614; --panel: #1a211e; --ink: #e5ebe8; --muted: #93a19b; --line: #2c3632;
+  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111614; --panel: #1a211e; --ink: #e5ebe8; --muted: #93a19b; --line: #2c3632;
+  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; color-scheme: dark }
+* { box-sizing: border-box }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px }
+header h1 { font: 700 clamp(28px, 5vw, 42px)/1.05 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch }
+.tuning { font: 500 13px var(--mono); color: var(--brass); letter-spacing: 0.08em }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; min-width: 0 }
+h2 { font: 700 21px/1.2 var(--display); margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap }
+h2 small { font: 500 12px var(--mono); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase }
+button { font: 500 14px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 8px 14px; cursor: pointer }
+button:hover { border-color: var(--brass) }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+button.primary { background: var(--brass); border-color: var(--brass); color: var(--panel); font-weight: 600 }
+button.on { background: var(--brass-soft); border-color: var(--brass) }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.hint { color: var(--muted); font-size: 13.5px; margin: 0 }
+
+/* tuner */
+.tuner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center }
+@media (max-width: 680px) { .tuner { grid-template-columns: 1fr } }
+.readout { text-align: center }
+.note { font: 700 88px/1 var(--display); letter-spacing: -0.02em }
+.note sub { font-size: 28px; color: var(--muted); vertical-align: baseline }
+.hz { font: 400 14px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.verdict { font-weight: 600; min-height: 1.5em }
+.verdict.good { color: var(--good) } .verdict.flat, .verdict.sharp { color: var(--warn) }
+.meter { position: relative; height: 54px; margin-top: 6px }
+.scale { position: absolute; inset: 22px 0 auto; height: 10px; border-top: 2px solid var(--line) }
+.tick { position: absolute; top: -2px; width: 1px; height: 10px; background: var(--muted) }
+.tick.c { height: 16px; background: var(--good); width: 2px }
+.zone { position: absolute; top: 14px; height: 18px; left: calc(50% - 5%); width: 10%; background: color-mix(in srgb, var(--good) 18%, transparent); border-radius: 4px }
+.needle { position: absolute; top: 4px; width: 4px; height: 44px; background: var(--brass); border-radius: 2px; left: 50%; transform: translateX(-50%); transition: left .12s linear }
+.scale-labels { display: flex; justify-content: space-between; font: 400 11px var(--mono); color: var(--muted); margin-top: 2px }
+.strings { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px }
+.strings button { display: grid; gap: 0; padding: 8px 4px; text-align: center }
+.strings b { font: 700 20px var(--display) }
+.strings span { font: 400 11px var(--mono); color: var(--muted) }
+.strings button.target { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent) }
+
+/* chords */
+.chords { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px }
+.chord { border: 1px solid var(--line); border-radius: 8px; padding: 10px 8px 8px; display: grid; justify-items: center; gap: 2px; cursor: pointer; background: transparent; color: var(--ink) }
+.chord:hover { border-color: var(--brass) }
+.chord .nm { font: 700 20px var(--display) }
+.chord .lv { font: 400 11px var(--mono); color: var(--muted); letter-spacing: .05em; text-transform: uppercase }
+.chord svg { width: 100%; max-width: 120px; height: auto }
+.filters { display: flex; gap: 6px; flex-wrap: wrap }
+
+/* rhythm */
+.metro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center }
+@media (max-width: 560px) { .metro { grid-template-columns: 1fr } }
+.bpm { font: 700 56px/1 var(--display); font-variant-numeric: tabular-nums; text-align: center; min-width: 3.2ch }
+.bpm small { display: block; font: 500 12px var(--mono); color: var(--muted); letter-spacing: .1em }
+.beats { display: flex; gap: 8px }
+.beat { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line) }
+.beat.lit { background: var(--brass); border-color: var(--brass) }
+input[type=range] { width: 100%; accent-color: var(--brass) }
+.pattern { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; font: 500 15px var(--mono); text-align: center }
+.pattern div { padding: 8px 0; border-radius: 6px; border: 1px solid var(--line) }
+.pattern div.rest { color: var(--muted); border-style: dashed }
+.pattern div.lit { background: var(--brass-soft); border-color: var(--brass) }
+.pattern em { display: block; font-style: normal; font-size: 11px; color: var(--muted) }
+.prog { display: flex; gap: 8px; flex-wrap: wrap; font: 600 18px var(--display) }
+.prog span { padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px }
+.prog span.lit { border-color: var(--brass); background: var(--brass-soft) }
+
+/* lessons */
+ol.path { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: l }
+ol.path li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; counter-increment: l }
+ol.path li::before { content: counter(l); font: 700 15px var(--display); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--muted) }
+ol.path li.done::before { content: "✓"; background: var(--good); border-color: var(--good); color: var(--panel) }
+ol.path label { display: grid; gap: 2px; cursor: pointer }
+ol.path label b { font-weight: 600 }
+ol.path label span { color: var(--muted); font-size: 14px }
+ol.path input { position: absolute; opacity: 0; pointer-events: none }
+.err { color: var(--warn); font-size: 14px }
+@media (prefers-reduced-motion: reduce) { .needle { transition: none } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="tuning">STANDARD TUNING · E A D G B E · A4 = 440 HZ</div>
+    <div class="row" style="justify-content:space-between"><h1>Practice Studio</h1><button class="primary" id="install" hidden>Install app</button></div>
+    <p>Your tools for every lesson: tune by ear or by needle, hear any chord before you play it, and keep time with the metronome.</p>
+  </header>
+
+  <section aria-labelledby="t-h">
+    <h2 id="t-h">Tuner <small>microphone</small></h2>
+    <div class="tuner">
+      <div class="readout">
+        <div class="note" id="note">–</div>
+        <div class="hz" id="hz">press Start, then pluck one string</div>
+        <div class="meter" aria-hidden="true">
+          <div class="zone"></div>
+          <div class="scale" id="scale"></div>
+          <div class="needle" id="needle"></div>
+        </div>
+        <div class="scale-labels"><span>−50¢ flat</span><span>in tune</span><span>sharp +50¢</span></div>
+        <div class="verdict" id="verdict" aria-live="polite"></div>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div class="row">
+          <button class="primary" id="mic">Start tuner</button>
+          <span class="err" id="micErr" hidden></span>
+        </div>
+        <p class="hint">Tap a string to hear its reference pitch. Pluck yours and match it. Flat means tighten the peg (pitch up); sharp means loosen it.</p>
+        <div class="strings" id="strings"></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="c-h">
+    <h2 id="c-h">Chords <small>tap to hear</small></h2>
+    <div class="filters" id="filters"></div>
+    <div class="chords" id="chords"></div>
+    <p class="hint">Numbers in the dots are fingers: 1 index, 2 middle, 3 ring, 4 pinky. ○ ring the open string, ✕ don't play it.</p>
+  </section>
+
+  <section aria-labelledby="r-h">
+    <h2 id="r-h">Rhythm <small>metronome + strum pattern</small></h2>
+    <div class="metro">
+      <div class="bpm"><span id="bpmv">70</span><small>BPM</small></div>
+      <div style="display:grid;gap:10px">
+        <input type="range" id="bpm" min="40" max="160" value="70" aria-label="Tempo in beats per minute">
+        <div class="row">
+          <button class="primary" id="go">Start</button>
+          <button id="tap">Tap tempo</button>
+          <button id="strumBtn" class="on" aria-pressed="true">Play strums</button>
+          <div class="beats" id="beats"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row" id="patterns"></div>
+    <div class="pattern" id="pattern"></div>
+    <div class="row"><span class="hint">Progression (one bar each):</span><div class="prog" id="prog"></div></div>
+    <div class="row" id="progs"></div>
+  </section>
+
+  <section aria-labelledby="l-h">
+    <h2 id="l-h">Lesson path <small id="pct"></small></h2>
+    <ol class="path" id="path"></ol>
+  </section>
+</div>
+
+<script>
+// ---------- data
+const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const OPEN = [40,45,50,55,59,64];
+const SNAME = ["E","A","D","G","B","E"];
+const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+// frets 6→1 (null = muted), fingers 6→1
+const CHORDS = {
+  Em:    {f:[0,2,2,0,0,0], g:[0,2,3,0,0,0], lv:"lesson 1"},
+  Asus2: {f:[null,0,2,2,0,0], g:[0,0,1,2,0,0], lv:"lesson 1"},
+  Am:    {f:[null,0,2,2,1,0], g:[0,0,2,3,1,0], lv:"lesson 2"},
+  E:     {f:[0,2,2,1,0,0], g:[0,2,3,1,0,0], lv:"lesson 2"},
+  C:     {f:[null,3,2,0,1,0], g:[0,3,2,0,1,0], lv:"lesson 3"},
+  G:     {f:[3,2,0,0,0,3], g:[2,1,0,0,0,3], lv:"lesson 3"},
+  D:     {f:[null,null,0,2,3,2], g:[0,0,0,1,3,2], lv:"lesson 4"},
+  A:     {f:[null,0,2,2,2,0], g:[0,0,1,2,3,0], lv:"lesson 4"},
+  Dm:    {f:[null,null,0,2,3,1], g:[0,0,0,2,3,1], lv:"lesson 5"},
+  E7:    {f:[0,2,0,1,0,0], g:[0,2,0,1,0,0], lv:"lesson 5"},
+  A7:    {f:[null,0,2,0,2,0], g:[0,0,2,0,3,0], lv:"lesson 5"},
+  D7:    {f:[null,null,0,2,1,2], g:[0,0,0,2,1,3], lv:"lesson 5"},
+  Cadd9: {f:[null,3,2,0,3,0], g:[0,2,1,0,3,0], lv:"lesson 6"},
+  G7:    {f:[3,2,0,0,0,1], g:[3,2,0,0,0,1], lv:"lesson 6"},
+  Fmaj7: {f:[null,null,3,2,1,0], g:[0,0,3,2,1,0], lv:"lesson 6"},
+  Em7:   {f:[0,2,2,0,3,0], g:[0,1,2,0,3,0], lv:"lesson 6"},
+};
+const PATTERNS = {
+  "Quarter downs": ["D","","D","","D","","D",""],
+  "Down-up eighths": ["D","U","D","U","D","U","D","U"],
+  "Folk: D DU UDU": ["D","","D","U","","U","D","U"],
+};
+const PROGS = {
+  "Em – Asus2": ["Em","Asus2"],
+  "Em – Am": ["Em","Am"],
+  "G – C – D": ["G","C","D","G"],
+  "G – Em – C – D": ["G","Em","C","D"],
+  "Am – C – G – D": ["Am","C","G","D"],
+  "C – G – Am – Fmaj7": ["C","G","Am","Fmaj7"],
+};
+const LESSONS = [
+  ["Posture and the pick", "Guitar on the right thigh, waist in the body's curve. Pick between thumb and the side of the index finger, only 2–3 mm showing."],
+  ["Tune all six strings", "Use the tuner above until every string shows green. Retune at the start of every session."],
+  ["Em and Asus2", "Two-finger chords. Pluck each string one by one: every note must ring clean, with no buzz or dead strings."],
+  ["Change Em → Asus2 in time", "Quarter downs at 60 BPM, one bar each. Switch on beat 1 even if the chord isn't perfect yet."],
+  ["Am and E", "Same finger shape, moved across one string. Practise the one-minute change: count how many switches you make."],
+  ["C, G and D", "The campfire trio. G – C – D – G at 60 BPM with quarter downs."],
+  ["Down-up eighths", "Keep the arm moving like a pendulum: down on the beat, up on the 'and', even when you miss the strings."],
+  ["The folk pattern", "D · D U · U D U over G – Em – C – D. This one pattern carries hundreds of songs."],
+];
+
+// ---------- audio
+let ctx;
+function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); return ctx; }
+const ksCache = new Map();
+function ksBuffer(midi, dur = 2.4) {
+  const key = midi + ":" + dur; if (ksCache.has(key)) return ksCache.get(key);
+  const c = ac(), R = c.sampleRate, n = Math.floor(R * dur), P = R / mf(midi);
+  const L = Math.floor(P - 0.6), d = P - 0.5 - L, k = (1 - d) / (1 + d);
+  const buf = new Float32Array(L); for (let i = 0; i < L; i++) buf[i] = Math.random() * 2 - 1;
+  for (let i = 1; i < L; i++) buf[i] = (buf[i] + buf[i - 1]) / 2;
+  const ab = c.createBuffer(1, n, R), out = ab.getChannelData(0);
+  const decay = midi < 50 ? 0.9965 : 0.995; let prev = 0, ax = 0, ay = 0, idx = 0;
+  for (let i = 0; i < n; i++) {
+    const v = buf[idx]; out[i] = v * 0.3; const lp = 0.5 * (v + prev); prev = v;
+    const ap = k * lp + ax - k * ay; ax = lp; ay = ap; buf[idx] = decay * ap; idx = (idx + 1) % L;
+  }
+  ksCache.set(key, ab); return ab;
+}
+let master;
+function out() { const c = ac(); if (!master) { master = c.createGain(); master.gain.value = 0.8; master.connect(c.destination); } return master; }
+function pluck(midi, when = 0, gain = 1) {
+  const c = ac(), s = c.createBufferSource(), g = c.createGain();
+  s.buffer = ksBuffer(midi); g.gain.value = gain; s.connect(g).connect(out()); s.start(when || c.currentTime);
+}
+function chordMidis(name) { return CHORDS[name].f.map((f, i) => f == null ? null : OPEN[i] + f).filter(m => m != null); }
+function strum(name, when, dir = "D", gain = 0.8) {
+  const ms = chordMidis(name); const order = dir === "U" ? ms.slice(-4).reverse() : ms;
+  order.forEach((m, i) => pluck(m, when + i * (dir === "U" ? 0.012 : 0.018), gain));
+}
+
+// ---------- tuner
+const scale = document.getElementById("scale");
+for (let c = -50; c <= 50; c += 10) { const t = document.createElement("div"); t.className = "tick" + (c === 0 ? " c" : ""); t.style.left = (50 + c) + "%"; scale.appendChild(t); }
+const stringsEl = document.getElementById("strings");
+OPEN.forEach((m, i) => {
+  const b = document.createElement("button"); b.id = "s" + i;
+  b.innerHTML = `<b>${SNAME[i]}</b><span>${6 - i} · ${mf(m).toFixed(1)}</span>`;
+  b.setAttribute("aria-label", `Play string ${6 - i}, ${SNAME[i]}`);
+  b.onclick = () => pluck(m); stringsEl.appendChild(b);
+});
+function yin(buf, R) {
+  const W = Math.floor(buf.length / 2), tmax = Math.min(W - 1, Math.floor(R / 70)), tmin = Math.floor(R / 1100);
+  const d = new Float32Array(tmax + 2);
+  for (let t = 1; t <= tmax + 1; t++) { let s = 0; for (let j = 0; j < W; j++) { const x = buf[j] - buf[j + t]; s += x * x; } d[t] = s; }
+  let run = 0; const cm = new Float32Array(tmax + 2); cm[0] = 1;
+  for (let t = 1; t <= tmax + 1; t++) { run += d[t]; cm[t] = run ? d[t] * t / run : 1; }
+  for (let t = tmin; t <= tmax; t++) if (cm[t] < 0.12) {
+    while (t + 1 <= tmax && cm[t + 1] < cm[t]) t++;
+    const a = cm[t - 1], b = cm[t], c = cm[t + 1], den = a - 2 * b + c;
+    return R / (t + (den ? 0.5 * (a - c) / den : 0));
+  }
+  return null;
+}
+let analyser, micStream, raf, smooth = null, lastHeard = 0;
+const $ = id => document.getElementById(id);
+async function startMic() {
+  const btn = $("mic");
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; cancelAnimationFrame(raf); btn.textContent = "Start tuner"; btn.classList.add("primary"); return; }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) { $("micErr").hidden = false; $("micErr").textContent = "The microphone is blocked. Allow mic access for this page, then press Start again."; return; }
+  $("micErr").hidden = true;
+  const c = ac(); analyser = c.createAnalyser(); analyser.fftSize = 4096;
+  c.createMediaStreamSource(micStream).connect(analyser);
+  btn.textContent = "Stop tuner"; btn.classList.remove("primary");
+  const data = new Float32Array(analyser.fftSize);
+  const loop = () => {
+    raf = requestAnimationFrame(loop);
+    analyser.getFloatTimeDomainData(data);
+    let s = 0; for (const v of data) s += v * v; const level = Math.sqrt(s / data.length);
+    const now = performance.now();
+    if (level > 0.008) {
+      const f = yin(data, c.sampleRate);
+      if (f) { smooth = smooth && Math.abs(1200 * Math.log2(f / smooth)) < 40 ? smooth * 0.7 + f * 0.3 : f; lastHeard = now; show(smooth); }
+    } else if (now - lastHeard > 1500) { smooth = null; }
+  };
+  loop();
+}
+function show(f) {
+  const m = 69 + 12 * Math.log2(f / 440);
+  let si = 0; OPEN.forEach((o, i) => { if (Math.abs(o - m) < Math.abs(OPEN[si] - m)) si = i; });
+  const near = Math.abs(OPEN[si] - m) < 2.5; const target = near ? OPEN[si] : Math.round(m);
+  const cents = (m - target) * 100;
+  $("note").innerHTML = `${NOTES[target % 12]}<sub>${Math.floor(target / 12) - 1}</sub>`;
+  $("hz").textContent = `${f.toFixed(1)} Hz · target ${mf(target).toFixed(1)} Hz · ${cents >= 0 ? "+" : ""}${cents.toFixed(0)}¢`;
+  $("needle").style.left = (50 + Math.max(-50, Math.min(50, cents))) + "%";
+  const v = $("verdict");
+  if (Math.abs(cents) <= 5) { v.className = "verdict good"; v.textContent = near ? `String ${6 - si} is in tune` : "In tune"; }
+  else if (cents < 0) { v.className = "verdict flat"; v.textContent = "Flat: tighten slowly"; }
+  else { v.className = "verdict sharp"; v.textContent = "Sharp: loosen slightly"; }
+  document.querySelectorAll(".strings button").forEach((b, i) => b.classList.toggle("target", near && i === si));
+}
+$("mic").onclick = startMic;
+
+// ---------- chord diagrams
+function diagram(ch) {
+  const { f, g } = CHORDS[ch]; const W = 120, H = 146, x0 = 18, y0 = 28, dx = 17, dy = 22;
+  const frets = f.filter(v => v); const maxF = Math.max(3, ...frets); const rows = Math.max(4, maxF);
+  let s = `<svg viewBox="0 0 ${W} ${y0 + rows * dy + 10}" role="img" aria-label="${ch} chord diagram">`;
+  s += `<rect x="${x0}" y="${y0 - 3}" width="${dx * 5}" height="4" fill="var(--ink)"/>`;
+  for (let r = 1; r <= rows; r++) s += `<line x1="${x0}" x2="${x0 + dx * 5}" y1="${y0 + r * dy}" y2="${y0 + r * dy}" stroke="var(--fret)" stroke-width="1.5"/>`;
+  for (let i = 0; i < 6; i++) s += `<line x1="${x0 + i * dx}" x2="${x0 + i * dx}" y1="${y0}" y2="${y0 + rows * dy}" stroke="var(--muted)" stroke-width="${1.6 - i * 0.15}"/>`;
+  f.forEach((v, i) => {
+    const x = x0 + i * dx;
+    if (v == null) s += `<text x="${x}" y="${y0 - 9}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="IBM Plex Mono, monospace">✕</text>`;
+    else if (v === 0) s += `<circle cx="${x}" cy="${y0 - 13}" r="4.5" fill="none" stroke="var(--ink)" stroke-width="1.4"/>`;
+    else { const y = y0 + (v - 0.5) * dy; s += `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--brass)"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--panel)" font-family="IBM Plex Sans, sans-serif">${g[i] || ""}</text>`; }
+  });
+  return s + "</svg>";
+}
+const levels = ["all", ...new Set(Object.values(CHORDS).map(c => c.lv))];
+let filter = "all";
+function renderChords() {
+  $("chords").innerHTML = "";
+  Object.keys(CHORDS).filter(k => filter === "all" || CHORDS[k].lv === filter).forEach(k => {
+    const b = document.createElement("button"); b.className = "chord";
+    b.innerHTML = `<span class="nm">${k}</span>${diagram(k)}<span class="lv">${CHORDS[k].lv}</span>`;
+    b.setAttribute("aria-label", `Hear ${k}`);
+    b.onclick = () => { const c = ac(), t = c.currentTime + 0.02; chordMidis(k).forEach((m, i) => pluck(m, t + i * 0.28, 0.8)); strum(k, t + chordMidis(k).length * 0.28 + 0.35); };
+    $("chords").appendChild(b);
+  });
+  $("filters").innerHTML = "";
+  levels.forEach(l => { const b = document.createElement("button"); b.textContent = l; b.className = l === filter ? "on" : ""; b.onclick = () => { filter = l; renderChords(); }; $("filters").appendChild(b); });
+}
+renderChords();
+
+// ---------- metronome + strums
+let bpm = 70, running = false, nextTime = 0, step = 0, timer, patName = "Quarter downs", progName = "Em – Asus2", playStrums = true;
+const beatsEl = $("beats"); for (let i = 0; i < 4; i++) { const d = document.createElement("div"); d.className = "beat"; beatsEl.appendChild(d); }
+function renderPattern() {
+  $("pattern").innerHTML = PATTERNS[patName].map((p, i) => `<div class="${p ? "" : "rest"}">${p || "·"}<em>${i % 2 ? "&" : i / 2 + 1}</em></div>`).join("");
+  $("patterns").innerHTML = ""; Object.keys(PATTERNS).forEach(n => { const b = document.createElement("button"); b.textContent = n; b.className = n === patName ? "on" : ""; b.onclick = () => { patName = n; renderPattern(); }; $("patterns").appendChild(b); });
+  $("prog").innerHTML = PROGS[progName].map(c => `<span>${c}</span>`).join("");
+  $("progs").innerHTML = ""; Object.keys(PROGS).forEach(n => { const b = document.createElement("button"); b.textContent = n; b.className = n === progName ? "on" : ""; b.onclick = () => { progName = n; renderPattern(); }; $("progs").appendChild(b); });
+}
+renderPattern();
+function click(t, accent) {
+  const c = ac(), o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = accent ? 1600 : 1000; g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.3, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  o.connect(g).connect(out()); o.start(t); o.stop(t + 0.06);
+}
+function schedule() {
+  const c = ac();
+  while (nextTime < c.currentTime + 0.12) {
+    const eighth = step % 8, bar = Math.floor(step / 8), prog = PROGS[progName], ch = prog[bar % prog.length];
+    if (eighth % 2 === 0) click(nextTime, eighth === 0);
+    const p = PATTERNS[patName][eighth];
+    if (playStrums && p) strum(ch, nextTime, p, p === "U" ? 0.45 : 0.65);
+    const st = step, delay = Math.max(0, (nextTime - c.currentTime) * 1000);
+    setTimeout(() => {
+      const e = st % 8, b = Math.floor(st / 8);
+      beatsEl.querySelectorAll(".beat").forEach((d, i) => d.classList.toggle("lit", i === Math.floor(e / 2)));
+      $("pattern").querySelectorAll("div").forEach((d, i) => d.classList.toggle("lit", i === e));
+      $("prog").querySelectorAll("span").forEach((d, i) => d.classList.toggle("lit", i === b % PROGS[progName].length));
+    }, delay);
+    nextTime += 30 / bpm; step++;
+  }
+}
+$("go").onclick = () => {
+  running = !running; $("go").textContent = running ? "Stop" : "Start";
+  if (running) { step = 0; nextTime = ac().currentTime + 0.1; timer = setInterval(schedule, 25); } else clearInterval(timer);
+};
+$("bpm").oninput = e => { bpm = +e.target.value; $("bpmv").textContent = bpm; };
+let taps = [];
+$("tap").onclick = () => { const n = performance.now(); taps = taps.filter(t => n - t < 2500); taps.push(n);
+  if (taps.length > 1) { const iv = (taps.at(-1) - taps[0]) / (taps.length - 1); bpm = Math.max(40, Math.min(160, Math.round(60000 / iv))); $("bpm").value = bpm; $("bpmv").textContent = bpm; } };
+$("strumBtn").onclick = () => { playStrums = !playStrums; $("strumBtn").classList.toggle("on", playStrums); $("strumBtn").setAttribute("aria-pressed", playStrums); $("strumBtn").textContent = playStrums ? "Play strums" : "Click only"; };
+
+// ---------- lessons
+let done = [];
+try { done = JSON.parse(localStorage.getItem("gtr-done") || "[]"); } catch (e) {}
+function renderPath() {
+  $("path").innerHTML = LESSONS.map(([t, d], i) => `<li class="${done.includes(i) ? "done" : ""}"><label><input type="checkbox" id="l${i}" ${done.includes(i) ? "checked" : ""}><b>${t}</b><span>${d}</span></label></li>`).join("");
+  LESSONS.forEach((_, i) => $("l" + i).onchange = e => { done = e.target.checked ? [...done, i] : done.filter(x => x !== i); try { localStorage.setItem("gtr-done", JSON.stringify(done)); } catch (er) {} renderPath(); });
+  $("pct").textContent = `${done.length} of ${LESSONS.length} done`;
+}
+renderPath();
+
+// ---------- install + offline
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+let installEvt;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("install").hidden = false; });
+$("install").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("install").hidden = true; };
+window.addEventListener("appinstalled", () => { $("install").hidden = true; });
+</script>
+</body>
+</html>
