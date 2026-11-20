@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Practice Studio</title>
-<meta name="description" content="Acoustic guitar practice: tuner, chord library, metronome and a beginner lesson path.">
+<meta name="description" content="A complete acoustic guitar course: 8 units from your first chord to barre chords, fingerstyle and the blues, with a built-in tuner, chord player and play-along metronome.">
 <meta name="theme-color" content="#111614">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one working column of instrument panels — tuner first (you always tune first), then chords, rhythm, lesson path. */
+/* Layout: sticky top bar; one reading column (lessons) or panel stack (course map, tools). Brass = the string metal, used for anything you can play. */
 :root {
   --bg: #eef1ef; --panel: #ffffff; --ink: #18211e; --muted: #5b6863; --line: #d3dad6;
-  --brass: #9a6b16; --brass-soft: #f3e6c8; --good: #217a4b; --warn: #b5482a; --fret: #b9c2bd;
+  --brass: #9a6b16; --brass-soft: #f3e6c8; --good: #217a4b; --warn: #b5482a; --fret: #b9c2bd; --wood: #e3ddd2;
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "IBM Plex Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -24,250 +24,508 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111614; --panel: #1a211e; --ink: #e5ebe8; --muted: #93a19b; --line: #2c3632;
-  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; color-scheme: dark } }
+  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; --wood: #262019; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #111614; --panel: #1a211e; --ink: #e5ebe8; --muted: #93a19b; --line: #2c3632;
-  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; color-scheme: dark }
+  --brass: #dcaa4c; --brass-soft: #3a2f18; --good: #4fc184; --warn: #ef7b5a; --fret: #46524d; --wood: #262019; color-scheme: dark }
 * { box-sizing: border-box }
 html, body { margin: 0 }
-body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body) }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel) }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.bar-in { max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 8px; min-height: 56px; flex-wrap: wrap }
+.brand { font: 700 19px var(--display); color: var(--ink); text-decoration: none; margin-right: auto; display: flex; align-items: center; gap: 8px }
+.brand img { width: 26px; height: 26px; border-radius: 6px }
+.nav a { font-weight: 500; font-size: 14.5px; color: var(--muted); text-decoration: none; padding: 7px 12px; border-radius: 7px }
+.nav a.on { color: var(--ink); background: var(--brass-soft) }
+main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 72px }
 .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px }
-header h1 { font: 700 clamp(28px, 5vw, 42px)/1.05 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
-header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch }
-.tuning { font: 500 13px var(--mono); color: var(--brass); letter-spacing: 0.08em }
-section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; min-width: 0 }
-h2 { font: 700 21px/1.2 var(--display); margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap }
-h2 small { font: 500 12px var(--mono); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase }
-button { font: 500 14px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 8px 14px; cursor: pointer }
-button:hover { border-color: var(--brass) }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
-button.primary { background: var(--brass); border-color: var(--brass); color: var(--panel); font-weight: 600 }
+.read { max-width: 760px }
+h1 { font: 700 clamp(30px, 5vw, 44px)/1.08 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+h2 { font: 700 22px/1.2 var(--display); margin: 0; text-wrap: balance }
+h3 { font: 700 18px/1.3 var(--display); margin: 8px 0 0 }
+.eyebrow { font: 500 12.5px var(--mono); color: var(--brass); letter-spacing: 0.08em; text-transform: uppercase }
+.muted { color: var(--muted) }
+p { margin: 0 }
+code { font: 500 0.92em var(--mono); background: var(--brass-soft); padding: 1px 5px; border-radius: 4px }
+section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; min-width: 0 }
+button, .btn { font: 500 14px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px }
+button:hover, .btn:hover { border-color: var(--brass) }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+.primary { background: var(--brass); border-color: var(--brass); color: var(--panel); font-weight: 600 }
 button.on { background: var(--brass-soft); border-color: var(--brass) }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
-.hint { color: var(--muted); font-size: 13.5px; margin: 0 }
+.hint { color: var(--muted); font-size: 14px }
+input[type=range] { accent-color: var(--brass); width: 100%; min-width: 0 }
+input[type=text], select { font: 15px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; min-width: 0 }
+
+/* home */
+.hero { display: grid; gap: 10px }
+.hero p { color: var(--muted); max-width: 62ch; font-size: 17px }
+.progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden }
+.progress i { display: block; height: 100%; background: var(--good); border-radius: 4px }
+.continue { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center }
+@media (max-width: 560px) { .continue { grid-template-columns: 1fr } }
+.routine { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+@media (max-width: 680px) { .routine { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.routine div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px }
+.routine b { font: 700 22px var(--display); font-variant-numeric: tabular-nums }
+.routine span { font-size: 13.5px; color: var(--muted) }
+.units { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px }
+@media (max-width: 760px) { .units { grid-template-columns: 1fr } }
+.unit { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0 }
+.unit header { display: grid; gap: 4px }
+.unit header p { color: var(--muted); font-size: 14.5px }
+.unit ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
+.unit li a { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 8px; margin: 0 -8px; border-radius: 7px; color: var(--ink); text-decoration: none; font-size: 15px }
+.unit li a:hover { background: var(--bg) }
+.dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font: 600 11px var(--mono); color: var(--muted) }
+.done .dot { background: var(--good); border-color: var(--good); color: var(--panel) }
+.unit li small { color: var(--muted); font: 400 12px var(--mono) }
+
+/* lesson */
+.lesson { display: grid; gap: 18px }
+.lesson-head { display: grid; gap: 8px }
+.meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 14px }
+.goal { border-left: 3px solid var(--brass); padding: 4px 0 4px 14px; font-size: 16.5px }
+.lesson .body { display: grid; gap: 14px }
+.body ul, .body ol { margin: 0; padding-left: 22px; display: grid; gap: 6px }
+.tip { background: var(--brass-soft); border-radius: 8px; padding: 12px 14px; font-size: 15px }
+.tip b:first-child { font-family: var(--display) }
+.widget { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0 }
+.widget-title { font: 600 13px var(--mono); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+.ready { display: grid; gap: 8px }
+.ready label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; cursor: pointer }
+.ready input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--good) }
+.pager { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap }
+
+/* chord diagrams */
+.chords { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px }
+.chord { border: 1px solid var(--line); border-radius: 8px; padding: 8px 6px 6px; display: grid; justify-items: center; gap: 0; cursor: pointer; background: transparent; color: var(--ink) }
+.chord .nm { font: 700 19px var(--display) }
+.chord .tag { font: 400 11px var(--mono); color: var(--muted); letter-spacing: .05em; text-transform: uppercase; min-height: 1.2em }
+.chord svg { width: 100%; max-width: 108px; height: auto }
+.filters { display: flex; gap: 6px; flex-wrap: wrap }
+
+/* tab + fretboard + player */
+.scroll { overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch }
+.tab svg, .fb svg { display: block }
+.tab text, .fb text { font-family: var(--mono) }
+.tab .ev.lit rect { fill: var(--brass) }
+.tab .ev.lit text { fill: var(--panel) }
+.controls { display: grid; grid-template-columns: auto auto minmax(80px, 1fr) auto; gap: 10px; align-items: center }
+@media (max-width: 520px) { .controls { grid-template-columns: auto minmax(0, 1fr) auto } .controls .bpmv { grid-column: 3 } .controls input { grid-column: 1 / -1; order: 5 } }
+.bpmv { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+.prog { display: flex; gap: 6px; flex-wrap: wrap; font: 600 17px var(--display) }
+.prog span { padding: 3px 11px; border: 1px solid var(--line); border-radius: 6px }
+.prog span.lit { border-color: var(--brass); background: var(--brass-soft) }
+.pattern { display: grid; gap: 4px; font: 500 16px var(--mono); text-align: center }
+.pattern div { padding: 6px 0 4px; border-radius: 6px; border: 1px solid var(--line); min-width: 0 }
+.pattern div.rest { color: var(--muted); border-style: dashed }
+.pattern div.lit { background: var(--brass-soft); border-color: var(--brass) }
+.pattern em { display: block; font-style: normal; font-size: 11px; color: var(--muted) }
+.beats { display: flex; gap: 6px }
+.beat { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line) }
+.beat.lit { background: var(--brass); border-color: var(--brass) }
 
 /* tuner */
 .tuner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center }
 @media (max-width: 680px) { .tuner { grid-template-columns: 1fr } }
 .readout { text-align: center }
-.note { font: 700 88px/1 var(--display); letter-spacing: -0.02em }
-.note sub { font-size: 28px; color: var(--muted); vertical-align: baseline }
-.hz { font: 400 14px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.note { font: 700 80px/1 var(--display); letter-spacing: -0.02em }
+.note sub { font-size: 26px; color: var(--muted); vertical-align: baseline }
+.hz { font: 400 13.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
 .verdict { font-weight: 600; min-height: 1.5em }
-.verdict.good { color: var(--good) } .verdict.flat, .verdict.sharp { color: var(--warn) }
+.verdict.good { color: var(--good) } .verdict.off { color: var(--warn) }
 .meter { position: relative; height: 54px; margin-top: 6px }
 .scale { position: absolute; inset: 22px 0 auto; height: 10px; border-top: 2px solid var(--line) }
 .tick { position: absolute; top: -2px; width: 1px; height: 10px; background: var(--muted) }
 .tick.c { height: 16px; background: var(--good); width: 2px }
-.zone { position: absolute; top: 14px; height: 18px; left: calc(50% - 5%); width: 10%; background: color-mix(in srgb, var(--good) 18%, transparent); border-radius: 4px }
+.zone { position: absolute; top: 14px; height: 18px; left: 45%; width: 10%; background: color-mix(in srgb, var(--good) 18%, transparent); border-radius: 4px }
 .needle { position: absolute; top: 4px; width: 4px; height: 44px; background: var(--brass); border-radius: 2px; left: 50%; transform: translateX(-50%); transition: left .12s linear }
 .scale-labels { display: flex; justify-content: space-between; font: 400 11px var(--mono); color: var(--muted); margin-top: 2px }
 .strings { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px }
-.strings button { display: grid; gap: 0; padding: 8px 4px; text-align: center }
-.strings b { font: 700 20px var(--display) }
-.strings span { font: 400 11px var(--mono); color: var(--muted) }
+.strings button { display: grid; gap: 0; padding: 8px 2px; justify-items: center }
+.strings b { font: 700 19px var(--display) }
+.strings span { font: 400 10.5px var(--mono); color: var(--muted) }
 .strings button.target { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent) }
-
-/* chords */
-.chords { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px }
-.chord { border: 1px solid var(--line); border-radius: 8px; padding: 10px 8px 8px; display: grid; justify-items: center; gap: 2px; cursor: pointer; background: transparent; color: var(--ink) }
-.chord:hover { border-color: var(--brass) }
-.chord .nm { font: 700 20px var(--display) }
-.chord .lv { font: 400 11px var(--mono); color: var(--muted); letter-spacing: .05em; text-transform: uppercase }
-.chord svg { width: 100%; max-width: 120px; height: auto }
-.filters { display: flex; gap: 6px; flex-wrap: wrap }
-
-/* rhythm */
-.metro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center }
-@media (max-width: 560px) { .metro { grid-template-columns: 1fr } }
-.bpm { font: 700 56px/1 var(--display); font-variant-numeric: tabular-nums; text-align: center; min-width: 3.2ch }
-.bpm small { display: block; font: 500 12px var(--mono); color: var(--muted); letter-spacing: .1em }
-.beats { display: flex; gap: 8px }
-.beat { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line) }
-.beat.lit { background: var(--brass); border-color: var(--brass) }
-input[type=range] { width: 100%; accent-color: var(--brass) }
-.pattern { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; font: 500 15px var(--mono); text-align: center }
-.pattern div { padding: 8px 0; border-radius: 6px; border: 1px solid var(--line) }
-.pattern div.rest { color: var(--muted); border-style: dashed }
-.pattern div.lit { background: var(--brass-soft); border-color: var(--brass) }
-.pattern em { display: block; font-style: normal; font-size: 11px; color: var(--muted) }
-.prog { display: flex; gap: 8px; flex-wrap: wrap; font: 600 18px var(--display) }
-.prog span { padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px }
-.prog span.lit { border-color: var(--brass); background: var(--brass-soft) }
-
-/* lessons */
-ol.path { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: l }
-ol.path li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; counter-increment: l }
-ol.path li::before { content: counter(l); font: 700 15px var(--display); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--muted) }
-ol.path li.done::before { content: "✓"; background: var(--good); border-color: var(--good); color: var(--panel) }
-ol.path label { display: grid; gap: 2px; cursor: pointer }
-ol.path label b { font-weight: 600 }
-ol.path label span { color: var(--muted); font-size: 14px }
-ol.path input { position: absolute; opacity: 0; pointer-events: none }
 .err { color: var(--warn); font-size: 14px }
+
+/* quizzes + timers */
+.big { font: 700 44px/1 var(--display); font-variant-numeric: tabular-nums }
+.answers { display: flex; flex-wrap: wrap; gap: 6px }
+.answers button.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent) }
+.answers button.wrong { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent) }
+.score { font: 500 14px var(--mono); color: var(--muted) }
 @media (prefers-reduced-motion: reduce) { .needle { transition: none } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="tuning">STANDARD TUNING · E A D G B E · A4 = 440 HZ</div>
-    <div class="row" style="justify-content:space-between"><h1>Practice Studio</h1><button class="primary" id="install" hidden>Install app</button></div>
-    <p>Your tools for every lesson: tune by ear or by needle, hear any chord before you play it, and keep time with the metronome.</p>
-  </header>
+<div class="bar"><div class="bar-in">
+  <a class="brand" href="#home"><img src="icon-192.png" alt="">Practice Studio</a>
+  <nav class="nav row" aria-label="Main"><a href="#home" id="nav-home">Course</a><a href="#tools" id="nav-tools">Tools</a></nav>
+  <button class="primary" id="install" hidden>Install app</button>
+</div></div>
+<main><div class="wrap" id="view"></div></main>
 
-  <section aria-labelledby="t-h">
-    <h2 id="t-h">Tuner <small>microphone</small></h2>
-    <div class="tuner">
-      <div class="readout">
-        <div class="note" id="note">–</div>
-        <div class="hz" id="hz">press Start, then pluck one string</div>
-        <div class="meter" aria-hidden="true">
-          <div class="zone"></div>
-          <div class="scale" id="scale"></div>
-          <div class="needle" id="needle"></div>
-        </div>
-        <div class="scale-labels"><span>−50¢ flat</span><span>in tune</span><span>sharp +50¢</span></div>
-        <div class="verdict" id="verdict" aria-live="polite"></div>
-      </div>
-      <div style="display:grid;gap:12px">
-        <div class="row">
-          <button class="primary" id="mic">Start tuner</button>
-          <span class="err" id="micErr" hidden></span>
-        </div>
-        <p class="hint">Tap a string to hear its reference pitch. Pluck yours and match it. Flat means tighten the peg (pitch up); sharp means loosen it.</p>
-        <div class="strings" id="strings"></div>
-      </div>
-    </div>
-  </section>
-
-  <section aria-labelledby="c-h">
-    <h2 id="c-h">Chords <small>tap to hear</small></h2>
-    <div class="filters" id="filters"></div>
-    <div class="chords" id="chords"></div>
-    <p class="hint">Numbers in the dots are fingers: 1 index, 2 middle, 3 ring, 4 pinky. ○ ring the open string, ✕ don't play it.</p>
-  </section>
-
-  <section aria-labelledby="r-h">
-    <h2 id="r-h">Rhythm <small>metronome + strum pattern</small></h2>
-    <div class="metro">
-      <div class="bpm"><span id="bpmv">70</span><small>BPM</small></div>
-      <div style="display:grid;gap:10px">
-        <input type="range" id="bpm" min="40" max="160" value="70" aria-label="Tempo in beats per minute">
-        <div class="row">
-          <button class="primary" id="go">Start</button>
-          <button id="tap">Tap tempo</button>
-          <button id="strumBtn" class="on" aria-pressed="true">Play strums</button>
-          <div class="beats" id="beats"></div>
-        </div>
-      </div>
-    </div>
-    <div class="row" id="patterns"></div>
-    <div class="pattern" id="pattern"></div>
-    <div class="row"><span class="hint">Progression (one bar each):</span><div class="prog" id="prog"></div></div>
-    <div class="row" id="progs"></div>
-  </section>
-
-  <section aria-labelledby="l-h">
-    <h2 id="l-h">Lesson path <small id="pct"></small></h2>
-    <ol class="path" id="path"></ol>
-  </section>
-</div>
-
+<script src="course.js"></script>
 <script>
-// ---------- data
-const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-const OPEN = [40,45,50,55,59,64];
-const SNAME = ["E","A","D","G","B","E"];
+"use strict";
+// ================================================================= helpers
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\*(.+?)\*/g, "<i>$1</i>").replace(/`(.+?)`/g, "<code>$1</code>");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("gs-" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("gs-" + k, JSON.stringify(v)); } catch (e) {} },
+};
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const OPEN = [40, 45, 50, 55, 59, 64];          // string 6 → 1
+const SNAME = ["E", "A", "D", "G", "B", "E"];
 const mf = m => 440 * Math.pow(2, (m - 69) / 12);
-// frets 6→1 (null = muted), fingers 6→1
-const CHORDS = {
-  Em:    {f:[0,2,2,0,0,0], g:[0,2,3,0,0,0], lv:"lesson 1"},
-  Asus2: {f:[null,0,2,2,0,0], g:[0,0,1,2,0,0], lv:"lesson 1"},
-  Am:    {f:[null,0,2,2,1,0], g:[0,0,2,3,1,0], lv:"lesson 2"},
-  E:     {f:[0,2,2,1,0,0], g:[0,2,3,1,0,0], lv:"lesson 2"},
-  C:     {f:[null,3,2,0,1,0], g:[0,3,2,0,1,0], lv:"lesson 3"},
-  G:     {f:[3,2,0,0,0,3], g:[2,1,0,0,0,3], lv:"lesson 3"},
-  D:     {f:[null,null,0,2,3,2], g:[0,0,0,1,3,2], lv:"lesson 4"},
-  A:     {f:[null,0,2,2,2,0], g:[0,0,1,2,3,0], lv:"lesson 4"},
-  Dm:    {f:[null,null,0,2,3,1], g:[0,0,0,2,3,1], lv:"lesson 5"},
-  E7:    {f:[0,2,0,1,0,0], g:[0,2,0,1,0,0], lv:"lesson 5"},
-  A7:    {f:[null,0,2,0,2,0], g:[0,0,2,0,3,0], lv:"lesson 5"},
-  D7:    {f:[null,null,0,2,1,2], g:[0,0,0,2,1,3], lv:"lesson 5"},
-  Cadd9: {f:[null,3,2,0,3,0], g:[0,2,1,0,3,0], lv:"lesson 6"},
-  G7:    {f:[3,2,0,0,0,1], g:[3,2,0,0,0,1], lv:"lesson 6"},
-  Fmaj7: {f:[null,null,3,2,1,0], g:[0,0,3,2,1,0], lv:"lesson 6"},
-  Em7:   {f:[0,2,2,0,3,0], g:[0,1,2,0,3,0], lv:"lesson 6"},
-};
-const PATTERNS = {
-  "Quarter downs": ["D","","D","","D","","D",""],
-  "Down-up eighths": ["D","U","D","U","D","U","D","U"],
-  "Folk: D DU UDU": ["D","","D","U","","U","D","U"],
-};
-const PROGS = {
-  "Em – Asus2": ["Em","Asus2"],
-  "Em – Am": ["Em","Am"],
-  "G – C – D": ["G","C","D","G"],
-  "G – Em – C – D": ["G","Em","C","D"],
-  "Am – C – G – D": ["Am","C","G","D"],
-  "C – G – Am – Fmaj7": ["C","G","Am","Fmaj7"],
-};
-const LESSONS = [
-  ["Posture and the pick", "Guitar on the right thigh, waist in the body's curve. Pick between thumb and the side of the index finger, only 2–3 mm showing."],
-  ["Tune all six strings", "Use the tuner above until every string shows green. Retune at the start of every session."],
-  ["Em and Asus2", "Two-finger chords. Pluck each string one by one: every note must ring clean, with no buzz or dead strings."],
-  ["Change Em → Asus2 in time", "Quarter downs at 60 BPM, one bar each. Switch on beat 1 even if the chord isn't perfect yet."],
-  ["Am and E", "Same finger shape, moved across one string. Practise the one-minute change: count how many switches you make."],
-  ["C, G and D", "The campfire trio. G – C – D – G at 60 BPM with quarter downs."],
-  ["Down-up eighths", "Keep the arm moving like a pendulum: down on the beat, up on the 'and', even when you miss the strings."],
-  ["The folk pattern", "D · D U · U D U over G – Em – C – D. This one pattern carries hundreds of songs."],
-];
+const midiOf = (s, f) => OPEN[6 - s] + f;      // s = string number 1..6
+const pcOf = n => NOTES.indexOf(n.replace("Db", "C#").replace("Eb", "D#").replace("Gb", "F#").replace("Ab", "G#").replace("Bb", "A#"));
 
-// ---------- audio
-let ctx;
+// ================================================================= chords
+// f: frets string 6→1 (null = don't play); g: fingers; name/tag optional
+const CHORDS = {
+  Em: { f: [0,2,2,0,0,0], g: [0,2,3,0,0,0], grp: "open" },
+  E: { f: [0,2,2,1,0,0], g: [0,2,3,1,0,0], grp: "open" },
+  Am: { f: [null,0,2,2,1,0], g: [0,0,2,3,1,0], grp: "open" },
+  A: { f: [null,0,2,2,2,0], g: [0,0,1,2,3,0], grp: "open" },
+  C: { f: [null,3,2,0,1,0], g: [0,3,2,0,1,0], grp: "open" },
+  G: { f: [3,2,0,0,0,3], g: [2,1,0,0,0,3], grp: "open" },
+  Grock: { name: "G", tag: "anchored", f: [3,2,0,0,3,3], g: [2,1,0,0,3,4], grp: "open" },
+  D: { f: [null,null,0,2,3,2], g: [0,0,0,1,3,2], grp: "open" },
+  Dm: { f: [null,null,0,2,3,1], g: [0,0,0,2,3,1], grp: "open" },
+  Fsmall: { name: "F", tag: "small", f: [null,null,3,2,1,1], g: [0,0,3,2,1,1], grp: "open" },
+  Fmaj7: { f: [null,null,3,2,1,0], g: [0,0,3,2,1,0], grp: "open" },
+  "G/B": { f: [null,2,0,0,0,3], g: [0,1,0,0,0,3], grp: "open" },
+  E7: { f: [0,2,0,1,0,0], g: [0,2,0,1,0,0], grp: "seventh" },
+  A7: { f: [null,0,2,0,2,0], g: [0,0,2,0,3,0], grp: "seventh" },
+  D7: { f: [null,null,0,2,1,2], g: [0,0,0,2,1,3], grp: "seventh" },
+  B7: { f: [null,2,1,2,0,2], g: [0,2,1,3,0,4], grp: "seventh" },
+  G7: { f: [3,2,0,0,0,1], g: [3,2,0,0,0,1], grp: "seventh" },
+  C7: { f: [null,3,2,3,1,0], g: [0,3,2,4,1,0], grp: "seventh" },
+  Am7: { f: [null,0,2,0,1,0], g: [0,0,2,0,1,0], grp: "seventh" },
+  Em7: { f: [0,2,2,0,3,3], g: [0,1,2,0,3,4], grp: "seventh" },
+  Cmaj7: { f: [null,3,2,0,0,0], g: [0,3,2,0,0,0], grp: "seventh" },
+  Asus2: { f: [null,0,2,2,0,0], g: [0,0,1,2,0,0], grp: "sus" },
+  Asus4: { f: [null,0,2,2,3,0], g: [0,0,1,2,3,0], grp: "sus" },
+  Dsus2: { f: [null,null,0,2,3,0], g: [0,0,0,1,3,0], grp: "sus" },
+  Dsus4: { f: [null,null,0,2,3,3], g: [0,0,0,1,3,4], grp: "sus" },
+  Esus4: { f: [0,2,2,2,0,0], g: [0,2,3,4,0,0], grp: "sus" },
+  Cadd9: { f: [null,3,2,0,3,3], g: [0,2,1,0,3,4], grp: "sus" },
+  G5: { f: [3,5,5,null,null,null], g: [1,3,4,0,0,0], grp: "power" },
+  A5: { f: [null,0,2,2,null,null], g: [0,0,1,2,0,0], grp: "power" },
+  C5: { f: [null,3,5,5,null,null], g: [0,1,3,4,0,0], grp: "power" },
+  D5: { f: [null,null,0,2,3,null], g: [0,0,0,1,3,0], grp: "power" },
+  E5: { f: [0,2,2,null,null,null], g: [0,1,2,0,0,0], grp: "power" },
+  F: { tag: "barre", f: [1,3,3,2,1,1], g: [1,3,4,2,1,1], grp: "barre" },
+  Fm: { tag: "barre", f: [1,3,3,1,1,1], g: [1,3,4,1,1,1], grp: "barre" },
+  Gbarre: { name: "G", tag: "barre 3fr", f: [3,5,5,4,3,3], g: [1,3,4,2,1,1], grp: "barre" },
+  Ambarre: { name: "Am", tag: "barre 5fr", f: [5,7,7,5,5,5], g: [1,3,4,1,1,1], grp: "barre" },
+  Bb: { tag: "barre", f: [null,1,3,3,3,1], g: [0,1,3,3,3,1], grp: "barre" },
+  Bm: { tag: "barre", f: [null,2,4,4,3,2], g: [0,1,3,4,2,1], grp: "barre" },
+  "C#m": { tag: "barre 4fr", f: [null,4,6,6,5,4], g: [0,1,3,4,2,1], grp: "barre" },
+};
+const chordName = k => (CHORDS[k] && CHORDS[k].name) || k;
+const chordMidis = k => CHORDS[k].f.map((f, i) => f == null ? null : OPEN[i] + f).filter(m => m != null);
+function chordStringNote(k, s) { const f = CHORDS[k].f[6 - s]; return f == null ? null : midiOf(s, f); }
+
+function diagram(k) {
+  const c = CHORDS[k], f = c.f, g = c.g;
+  const played = f.filter(v => v > 0); const hi = Math.max(0, ...played);
+  const base = hi > 4 ? Math.min(...played) : 1; const rows = Math.max(4, hi - base + 1);
+  const x0 = 20, y0 = 30, dx = 15, dy = 20, W = x0 + dx * 5 + 26, H = y0 + rows * dy + 6;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(chordName(k))} chord diagram">`;
+  s += base === 1 ? `<rect x="${x0 - 1}" y="${y0 - 4}" width="${dx * 5 + 2}" height="4" fill="var(--ink)"/>`
+    : `<text x="${x0 + dx * 5 + 5}" y="${y0 + dy * 0.66}" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${base}fr</text>`;
+  for (let r = base === 1 ? 1 : 0; r <= rows; r++) s += `<line x1="${x0}" x2="${x0 + dx * 5}" y1="${y0 + r * dy}" y2="${y0 + r * dy}" stroke="var(--fret)" stroke-width="1.4"/>`;
+  for (let i = 0; i < 6; i++) s += `<line x1="${x0 + i * dx}" x2="${x0 + i * dx}" y1="${y0}" y2="${y0 + rows * dy}" stroke="var(--muted)" stroke-width="${1.7 - i * 0.17}"/>`;
+  // barre: finger 1 on 2+ strings at the same fret
+  const ones = f.map((v, i) => (g[i] === 1 && v > 0) ? i : -1).filter(i => i >= 0);
+  if (ones.length > 1 && ones.every(i => f[i] === f[ones[0]])) {
+    const y = y0 + (f[ones[0]] - base + 0.5) * dy, xa = x0 + ones[0] * dx, xb = x0 + ones.at(-1) * dx;
+    s += `<rect x="${xa - 6.5}" y="${y - 6.5}" width="${xb - xa + 13}" height="13" rx="6.5" fill="var(--brass)"/>`;
+  }
+  f.forEach((v, i) => {
+    const x = x0 + i * dx;
+    if (v == null) s += `<text x="${x}" y="${y0 - 10}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono, monospace">✕</text>`;
+    else if (v === 0) s += `<circle cx="${x}" cy="${y0 - 14}" r="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>`;
+    else { const y = y0 + (v - base + 0.5) * dy; s += `<circle cx="${x}" cy="${y}" r="6.8" fill="var(--brass)"/><text x="${x}" y="${y + 3.6}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--panel)" font-family="IBM Plex Sans, sans-serif">${g[i] || ""}</text>`; }
+  });
+  return s + "</svg>";
+}
+
+// ================================================================= audio
+let ctx, master;
 function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); return ctx; }
+function out() { const c = ac(); if (!master) { master = c.createGain(); master.gain.value = 0.8; master.connect(c.destination); } return master; }
 const ksCache = new Map();
-function ksBuffer(midi, dur = 2.4) {
-  const key = midi + ":" + dur; if (ksCache.has(key)) return ksCache.get(key);
+function ksBuffer(midi, dur = 2.4, mute = false) {
+  const key = midi + ":" + dur + ":" + mute; if (ksCache.has(key)) return ksCache.get(key);
   const c = ac(), R = c.sampleRate, n = Math.floor(R * dur), P = R / mf(midi);
   const L = Math.floor(P - 0.6), d = P - 0.5 - L, k = (1 - d) / (1 + d);
   const buf = new Float32Array(L); for (let i = 0; i < L; i++) buf[i] = Math.random() * 2 - 1;
   for (let i = 1; i < L; i++) buf[i] = (buf[i] + buf[i - 1]) / 2;
-  const ab = c.createBuffer(1, n, R), out = ab.getChannelData(0);
-  const decay = midi < 50 ? 0.9965 : 0.995; let prev = 0, ax = 0, ay = 0, idx = 0;
+  const ab = c.createBuffer(1, n, R), o = ab.getChannelData(0);
+  const decay = mute ? 0.93 : midi < 50 ? 0.9965 : 0.995; let prev = 0, ax = 0, ay = 0, idx = 0;
   for (let i = 0; i < n; i++) {
-    const v = buf[idx]; out[i] = v * 0.3; const lp = 0.5 * (v + prev); prev = v;
+    const v = buf[idx]; o[i] = v * 0.3; const lp = 0.5 * (v + prev); prev = v;
     const ap = k * lp + ax - k * ay; ax = lp; ay = ap; buf[idx] = decay * ap; idx = (idx + 1) % L;
   }
   ksCache.set(key, ab); return ab;
 }
-let master;
-function out() { const c = ac(); if (!master) { master = c.createGain(); master.gain.value = 0.8; master.connect(c.destination); } return master; }
-function pluck(midi, when = 0, gain = 1) {
+function pluck(midi, when = 0, gain = 1, mute = false) {
   const c = ac(), s = c.createBufferSource(), g = c.createGain();
-  s.buffer = ksBuffer(midi); g.gain.value = gain; s.connect(g).connect(out()); s.start(when || c.currentTime);
+  s.buffer = ksBuffer(midi, mute ? 0.25 : 2.4, mute); g.gain.value = gain; s.connect(g).connect(out()); s.start(when || c.currentTime);
 }
-function chordMidis(name) { return CHORDS[name].f.map((f, i) => f == null ? null : OPEN[i] + f).filter(m => m != null); }
-function strum(name, when, dir = "D", gain = 0.8) {
-  const ms = chordMidis(name); const order = dir === "U" ? ms.slice(-4).reverse() : ms;
+function strum(k, when, dir = "D", gain = 0.8) {
+  const ms = chordMidis(k);
+  if (dir === "X") { ms.forEach((m, i) => pluck(m, when + i * 0.008, gain * 0.9, true)); return; }
+  const order = dir === "U" ? ms.slice(-4).reverse() : ms;
   order.forEach((m, i) => pluck(m, when + i * (dir === "U" ? 0.012 : 0.018), gain));
 }
+function hearChord(k) { const c = ac(), t = c.currentTime + 0.02, ms = chordMidis(k); ms.forEach((m, i) => pluck(m, t + i * 0.26, 0.8)); strum(k, t + ms.length * 0.26 + 0.35); }
+function click(t, accent) {
+  const c = ac(), o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = accent ? 1600 : 1000; g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(accent ? 0.45 : 0.25, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  o.connect(g).connect(out()); o.start(t); o.stop(t + 0.06);
+}
 
-// ---------- tuner
-const scale = document.getElementById("scale");
-for (let c = -50; c <= 50; c += 10) { const t = document.createElement("div"); t.className = "tick" + (c === 0 ? " c" : ""); t.style.left = (50 + c) + "%"; scale.appendChild(t); }
-const stringsEl = document.getElementById("strings");
-OPEN.forEach((m, i) => {
-  const b = document.createElement("button"); b.id = "s" + i;
-  b.innerHTML = `<b>${SNAME[i]}</b><span>${6 - i} · ${mf(m).toFixed(1)}</span>`;
-  b.setAttribute("aria-label", `Play string ${6 - i}, ${SNAME[i]}`);
-  b.onclick = () => pluck(m); stringsEl.appendChild(b);
-});
+// Looping scheduler. events: [{t (beats), ...}], fires onEvent(ev, when). Tempo can change while running.
+let activeLoop = null;
+function stopAll() { if (activeLoop) activeLoop.stop(); }
+function makeLoop({ length, events, beatsPerBar, countIn = 0, getBpm, onEvent, onBeat, onStop, clickOn = () => true }) {
+  const byBeat = new Map();
+  events.forEach(e => { const b = Math.floor(e.t + 1e-9); if (!byBeat.has(b)) byBeat.set(b, []); byBeat.get(b).push(e); });
+  let timer, beat = -countIn, nextTime, timeouts = [];
+  const loop = {
+    running: false,
+    start() {
+      stopAll(); activeLoop = loop; loop.running = true; beat = -countIn; nextTime = ac().currentTime + 0.12;
+      timer = setInterval(tick, 25); tick();
+    },
+    stop() {
+      if (!loop.running) return; loop.running = false; clearInterval(timer); timeouts.forEach(clearTimeout); timeouts = [];
+      if (activeLoop === loop) activeLoop = null; onStop && onStop();
+    },
+  };
+  function later(fn, when) { timeouts.push(setTimeout(fn, Math.max(0, (when - ac().currentTime) * 1000))); if (timeouts.length > 200) timeouts = timeouts.slice(-100); }
+  function tick() {
+    const c = ac();
+    while (nextTime < c.currentTime + 0.15) {
+      const dur = 60 / getBpm();
+      const inBar = ((beat % beatsPerBar) + beatsPerBar) % beatsPerBar;
+      if (beat < 0 || clickOn()) click(nextTime, inBar === 0);
+      const bt = beat, when0 = nextTime;
+      if (onBeat) later(() => onBeat(bt < 0 ? -1 : bt % length, bt), when0);
+      if (beat >= 0) {
+        const pos = beat % length;
+        (byBeat.get(pos) || []).forEach(e => { const when = when0 + (e.t - pos) * dur; onEvent(e, when); later(() => e.show && e.show(), when); });
+      }
+      nextTime += dur; beat++;
+    }
+  }
+  return loop;
+}
+
+// ================================================================= widgets
+const W = {};
+
+W.chords = (el, list) => {
+  el.className = "chords";
+  el.innerHTML = list.map(k => CHORDS[k] ? `<button class="chord" data-k="${esc(k)}" aria-label="Hear ${esc(chordName(k))}"><span class="nm">${esc(chordName(k))}</span>${diagram(k)}<span class="tag">${esc(CHORDS[k].tag || "")}</span></button>` : `<span class="err">Unknown chord ${esc(k)}</span>`).join("");
+  $$(".chord", el).forEach(b => b.onclick = () => hearChord(b.dataset.k));
+};
+
+function bpmControls(box, bpm, min, max) {
+  box.innerHTML = `<button class="primary go">▶ Start</button><button class="snd on" aria-pressed="true">Guitar on</button>
+    <input type="range" min="${min}" max="${max}" value="${bpm}" aria-label="Tempo"><span class="bpmv">${bpm} BPM</span>`;
+  const st = { bpm };
+  $("input", box).oninput = e => { st.bpm = +e.target.value; $(".bpmv", box).textContent = st.bpm + " BPM"; };
+  st.guitar = true;
+  $(".snd", box).onclick = e => { st.guitar = !st.guitar; e.target.classList.toggle("on", st.guitar); e.target.setAttribute("aria-pressed", st.guitar); e.target.textContent = st.guitar ? "Guitar on" : "Click only"; };
+  return st;
+}
+
+function countLabels(n, sub) {
+  return Array.from({ length: n }, (_, i) => {
+    if (sub === 3) return i + 1;
+    if (sub === 4) return ["", "e", "&", "a"][i % 4] || Math.floor(i / 4) + 1;
+    return i % sub ? "&" : i / sub + 1;
+  });
+}
+const tokLabel = t => ({ D: "↓", U: "↑", X: "✕", ".": "·" }[t] || t.replace(/B/g, "T").replace(/b/g, "t"));
+
+// play-along: {prog, pattern, bpm, sub, perBar, swing, title, editable}
+W.play = (el, o) => {
+  const sub = o.sub || 2; let prog = o.prog.slice(); let pattern = o.pattern.trim().split(/\s+/);
+  el.className = "widget";
+  el.innerHTML = `<div class="widget-title"><span>${esc(o.title || "Play along")}</span><span class="beats"></span></div>
+    ${o.editable ? `<div class="row"><input type="text" class="pin" value="${esc(prog.join(" "))}" aria-label="Chords, one per bar" style="flex:1 1 200px">
+      <select class="psel" aria-label="Strum pattern">${Object.entries(window.PATTERNS).map(([n, p]) => `<option value="${esc(p.p)}|${p.sub || 2}|${p.swing ? 1 : 0}" ${p.p === o.pattern ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+      <p class="hint err pmsg" hidden></p>` : ""}
+    <div class="prog"></div><div class="pattern"></div><div class="controls"></div>`;
+  const st = bpmControls($(".controls", el), o.bpm || 70, o.min || 40, o.max || 180);
+  let loop, swing = !!o.swing, curSub = sub;
+  const perBar = o.perBar || 1;
+  function render() {
+    $(".prog", el).innerHTML = prog.map(c => `<span>${esc(chordName(c))}</span>`).join("");
+    const labels = countLabels(pattern.length, curSub);
+    const pe = $(".pattern", el); pe.style.gridTemplateColumns = `repeat(${pattern.length}, minmax(0, 1fr))`;
+    pe.innerHTML = pattern.map((t, i) => `<div class="${t === "." ? "rest" : ""}">${esc(tokLabel(t))}<em>${labels[i]}</em></div>`).join("");
+    const bpb = pattern.length / curSub;
+    $(".beats", el).innerHTML = Array.from({ length: bpb }, () => `<i class="beat"></i>`).join("");
+  }
+  function build() {
+    const bpb = pattern.length / curSub, events = [], bars = Math.ceil(prog.length / perBar);
+    for (let bar = 0; bar < bars; bar++) pattern.forEach((t, i) => {
+      if (t === ".") return;
+      let frac = (i % curSub) / curSub; if (swing && curSub === 2 && frac === 0.5) frac = 2 / 3;
+      const beatInBar = Math.floor(i / curSub);
+      const ci = Math.min(prog.length - 1, bar * perBar + Math.floor(i * perBar / pattern.length));
+      events.push({ t: bar * bpb + beatInBar + frac, tok: t, chord: prog[ci], show: () => {
+        $$(".pattern div", el).forEach((d, j) => d.classList.toggle("lit", j === i));
+        $$(".prog span", el).forEach((d, j) => d.classList.toggle("lit", j === ci));
+      } });
+    });
+    return makeLoop({
+      length: bars * bpb, events, beatsPerBar: bpb, countIn: bpb, getBpm: () => st.bpm,
+      onEvent: (e, when) => {
+        if (!st.guitar) return;
+        const t = e.tok;
+        if (t === "D" || t === "U" || t === "X") strum(e.chord, when, t, t === "U" ? 0.45 : 0.65);
+        else [...t].forEach(ch => {
+          let m = null; const ms = chordMidis(e.chord);
+          if (ch === "B") m = ms[0]; else if (ch === "b") m = ms[1]; else if (/[1-6]/.test(ch)) m = chordStringNote(e.chord, +ch);
+          if (m != null) pluck(m, when, ch === "B" || ch === "b" ? 0.75 : 0.6);
+        });
+      },
+      onBeat: (b, raw) => $$(".beat", el).forEach((d, j) => d.classList.toggle("lit", b >= 0 ? j === b % bpb : j === ((raw % bpb) + bpb) % bpb)),
+      onStop: () => { $(".go", el).textContent = "▶ Start"; $$(".lit", el).forEach(d => d.classList.remove("lit")); },
+    });
+  }
+  render();
+  $(".go", el).onclick = () => {
+    if (loop && loop.running) { loop.stop(); return; }
+    if (o.editable) {
+      const cs = $(".pin", el).value.trim().split(/[\s,]+/).filter(Boolean);
+      const bad = cs.filter(c => !CHORDS[c] && !Object.keys(CHORDS).find(k => chordName(k) === c && !CHORDS[k].tag));
+      if (!cs.length || bad.length) { const m = $(".pmsg", el); m.hidden = false; m.textContent = bad.length ? `I don't know the chord "${bad[0]}". Use names from the chord library, e.g. G Em C D.` : "Type at least one chord."; return; }
+      $(".pmsg", el).hidden = true;
+      prog = cs.map(c => CHORDS[c] ? c : Object.keys(CHORDS).find(k => chordName(k) === c));
+      const [p, s, sw] = $(".psel", el).value.split("|"); pattern = p.split(/\s+/); curSub = +s; swing = sw === "1"; render();
+    }
+    loop = build(); loop.start(); $(".go", el).textContent = "■ Stop";
+  };
+};
+
+// tab: {notes, bpm, unit (tokens per beat), title, beats}
+function parseTab(str) {
+  const evs = [], bars = []; let t = 0;
+  str.trim().split(/\s+/).forEach(tok => {
+    if (tok === "|") { bars.push(t); return; }
+    let [body, d] = tok.split(":"); d = d ? parseFloat(d) : 1;
+    if (body !== "-") evs.push({ t, d, notes: body.split("+").map(n => { const [s, f] = n.split("."); return { s: +s, f: parseInt(f, 10), lab: f, soft: /[hp]/.test(f) }; }) });
+    t += d;
+  });
+  return { evs, bars, total: t };
+}
+W.tab = (el, o) => {
+  const unit = o.unit || 2, tab = parseTab(o.notes), U = 24 * (o.wide || 1), X0 = 30, top = 14, gap = 15;
+  const width = X0 + tab.total * U + 12, height = top + gap * 5 + 14;
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Tab">`;
+  for (let s = 1; s <= 6; s++) { const y = top + (s - 1) * gap; svg += `<line x1="${X0 - 6}" x2="${width - 6}" y1="${y}" y2="${y}" stroke="var(--fret)"/><text x="6" y="${y + 4}" font-size="11" fill="var(--muted)">${"eBGDAE"[s - 1]}</text>`; }
+  [0, ...tab.bars, tab.total].forEach(b => { const x = X0 + b * U - 6; svg += `<line x1="${x}" x2="${x}" y1="${top}" y2="${top + gap * 5}" stroke="var(--muted)" stroke-width="1.2"/>`; });
+  tab.evs.forEach((e, i) => {
+    svg += `<g class="ev" data-i="${i}">`;
+    e.notes.forEach(n => { const x = X0 + e.t * U + U / 2 - 6, y = top + (n.s - 1) * gap, w = 7 * n.lab.length + 6;
+      svg += `<rect x="${x - w / 2}" y="${y - 7}" width="${w}" height="14" rx="3" fill="var(--panel)"/><text x="${x}" y="${y + 4}" font-size="12" font-weight="500" text-anchor="middle" fill="var(--ink)">${esc(n.lab)}</text>`; });
+    svg += `</g>`;
+  });
+  svg += "</svg>";
+  el.className = "widget tab";
+  el.innerHTML = `<div class="widget-title"><span>${esc(o.title || "Tab")}</span><span class="beats"></span></div><div class="scroll">${svg}</div><div class="controls"></div>`;
+  const st = bpmControls($(".controls", el), o.bpm || 70, o.min || 30, o.max || 200);
+  const bpb = o.beats || 4; const lenBeats = Math.ceil(tab.total / unit / bpb) * bpb;
+  $(".beats", el).innerHTML = Array.from({ length: bpb }, () => `<i class="beat"></i>`).join("");
+  const groups = $$(".ev", el);
+  let loop;
+  $(".go", el).onclick = () => {
+    if (loop && loop.running) { loop.stop(); return; }
+    const events = tab.evs.map((e, i) => ({ t: e.t / unit, e, show: () => { groups.forEach((g, j) => g.classList.toggle("lit", j === i)); const sc = $(".scroll", el), x = X0 + e.t * U; if (x > sc.scrollLeft + sc.clientWidth - 60 || x < sc.scrollLeft) sc.scrollLeft = x - 40; } }));
+    loop = makeLoop({ length: lenBeats, events, beatsPerBar: bpb, countIn: bpb, getBpm: () => st.bpm, clickOn: () => true,
+      onEvent: (ev, when) => { if (st.guitar) ev.e.notes.forEach(n => pluck(midiOf(n.s, n.f), when, n.soft ? 0.5 : 0.8)); },
+      onBeat: (b, raw) => $$(".beat", el).forEach((d, j) => d.classList.toggle("lit", j === ((raw % bpb) + bpb) % bpb)),
+      onStop: () => { $(".go", el).textContent = "▶ Start"; $$(".lit", el).forEach(d => d.classList.remove("lit")); } });
+    loop.start(); $(".go", el).textContent = "■ Stop";
+  };
+};
+
+// fretboard: {from, to, pcs, root, strings, label: name|degree, title, marks: ["s.f", ...]}
+const DEG = { 0: "R", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4", 6: "♭5", 7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7" };
+W.fret = (el, o) => {
+  const from = o.from || 0, to = o.to ?? 5, strings = o.strings || [1, 2, 3, 4, 5, 6];
+  const FW = 46, openW = from === 0 ? 34 : 0, X0 = 24 + openW, top = 16, gap = 20;
+  const nF = to - Math.max(from, 1) + 1, width = X0 + nF * FW + 10, height = top + gap * 5 + 30;
+  const fx = f => f === 0 ? X0 - openW / 2 - 2 : X0 + (f - Math.max(from, 1) + 0.5) * FW;
+  const pcs = o.pcs ? o.pcs.map(pcOf) : null, root = o.root ? pcOf(o.root) : null;
+  const marks = [];
+  if (o.marks) o.marks.forEach(m => { const [s, f] = m.split("."); marks.push({ s: +s, f: +f }); });
+  else for (const s of strings) for (let f = from; f <= to; f++) { const pc = midiOf(s, f) % 12; if (!pcs || pcs.includes(pc)) marks.push({ s, f }); }
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(o.title || "Fretboard")}">`;
+  svg += `<rect x="${X0}" y="${top - 6}" width="${nF * FW}" height="${gap * 5 + 12}" fill="var(--wood)" rx="2"/>`;
+  [3, 5, 7, 9, 15, 17].forEach(f => { if (f >= Math.max(from, 1) && f <= to) svg += `<circle cx="${fx(f)}" cy="${top + gap * 2.5}" r="4" fill="var(--fret)"/>`; });
+  if (12 >= Math.max(from, 1) && 12 <= to) [1.5, 3.5].forEach(k => svg += `<circle cx="${fx(12)}" cy="${top + gap * k}" r="4" fill="var(--fret)"/>`);
+  for (let i = 0; i <= nF; i++) { const x = X0 + i * FW; svg += `<line x1="${x}" x2="${x}" y1="${top - 6}" y2="${top + gap * 5 + 6}" stroke="${i === 0 && from <= 1 ? "var(--ink)" : "var(--fret)"}" stroke-width="${i === 0 && from <= 1 ? 4 : 2}"/>`; }
+  for (let s = 1; s <= 6; s++) { const y = top + (s - 1) * gap; svg += `<line x1="${X0 - openW}" x2="${width - 10}" y1="${y}" y2="${y}" stroke="var(--muted)" stroke-width="${0.8 + s * 0.22}"/><text x="4" y="${y + 4}" font-size="11" fill="var(--muted)">${"eBGDAE"[s - 1]}</text>`; }
+  for (let f = Math.max(from, 1); f <= to; f++) svg += `<text x="${fx(f)}" y="${height - 6}" font-size="11" text-anchor="middle" fill="var(--muted)">${f}</text>`;
+  marks.forEach(m => {
+    const pc = midiOf(m.s, m.f) % 12, isRoot = root != null && pc === root, x = fx(m.f), y = top + (m.s - 1) * gap;
+    const lab = o.label === "none" ? "" : o.label === "degree" && root != null ? DEG[(pc - root + 12) % 12] : NOTES[pc];
+    svg += `<g class="mk" data-m="${midiOf(m.s, m.f)}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="9" fill="${isRoot ? "var(--brass)" : "var(--panel)"}" stroke="${isRoot ? "var(--brass)" : "var(--ink)"}" stroke-width="1.4"/><text x="${x}" y="${y + 3.5}" font-size="${lab.length > 1 ? 8.5 : 10}" font-weight="600" text-anchor="middle" fill="${isRoot ? "var(--panel)" : "var(--ink)"}">${esc(lab)}</text></g>`;
+  });
+  svg += "</svg>";
+  el.className = "widget fb";
+  el.innerHTML = `<div class="widget-title"><span>${esc(o.title || "Fretboard")}</span><span>tap a note to hear it</span></div><div class="scroll">${svg}</div>`;
+  $$(".mk", el).forEach(g => g.onclick = () => pluck(+g.dataset.m));
+};
+
+// one-minute chord change timer: [chordA, chordB]
+W.changes = (el, pair) => {
+  const key = "best-" + pair.join("-"); let best = store.get(key, 0), count = 0, end = 0, timer;
+  el.className = "widget";
+  el.innerHTML = `<div class="widget-title"><span>One-minute changes: ${pair.map(chordName).join(" ↔ ")}</span><span class="bestv">best: ${best}</span></div>
+    <p class="hint">Press Start, then switch back and forth as fast as you can while keeping each chord clean. Tap the big button (or press space) on every change.</p>
+    <div class="row"><button class="primary go">▶ Start 60 s</button><button class="cnt" disabled style="font-size:18px;padding:12px 22px">Changed! <b class="n">0</b></button><span class="big t">60</span></div>`;
+  const tap = () => { if (!end) return; count++; $(".n", el).textContent = count; };
+  $(".cnt", el).onclick = tap;
+  const key2 = e => { if (e.code === "Space" && end && document.body.contains(el)) { e.preventDefault(); tap(); } };
+  document.addEventListener("keydown", key2);
+  $(".go", el).onclick = () => {
+    count = 0; $(".n", el).textContent = 0; end = performance.now() + 60000; $(".cnt", el).disabled = false; $(".cnt", el).focus();
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (!document.body.contains(el)) { clearInterval(timer); document.removeEventListener("keydown", key2); return; }
+      const left = Math.max(0, Math.ceil((end - performance.now()) / 1000)); $(".t", el).textContent = left;
+      if (!left) { clearInterval(timer); end = 0; $(".cnt", el).disabled = true; const c = ac(); click(c.currentTime, true); click(c.currentTime + 0.15, true);
+        if (count > best) { best = count; store.set(key, best); } $(".bestv", el).textContent = `best: ${best} · this round: ${count}`; }
+    }, 200);
+  };
+};
+
+// tuner (one microphone shared by the page)
+let mic = null;
+function stopMic() { if (mic) { mic.stream.getTracks().forEach(t => t.stop()); cancelAnimationFrame(mic.raf); mic = null; } }
 function yin(buf, R) {
-  const W = Math.floor(buf.length / 2), tmax = Math.min(W - 1, Math.floor(R / 70)), tmin = Math.floor(R / 1100);
+  const Wn = Math.floor(buf.length / 2), tmax = Math.min(Wn - 1, Math.floor(R / 70)), tmin = Math.floor(R / 1100);
   const d = new Float32Array(tmax + 2);
-  for (let t = 1; t <= tmax + 1; t++) { let s = 0; for (let j = 0; j < W; j++) { const x = buf[j] - buf[j + t]; s += x * x; } d[t] = s; }
+  for (let t = 1; t <= tmax + 1; t++) { let s = 0; for (let j = 0; j < Wn; j++) { const x = buf[j] - buf[j + t]; s += x * x; } d[t] = s; }
   let run = 0; const cm = new Float32Array(tmax + 2); cm[0] = 1;
   for (let t = 1; t <= tmax + 1; t++) { run += d[t]; cm[t] = run ? d[t] * t / run : 1; }
   for (let t = tmin; t <= tmax; t++) if (cm[t] < 0.12) {
@@ -277,138 +535,172 @@ function yin(buf, R) {
   }
   return null;
 }
-let analyser, micStream, raf, smooth = null, lastHeard = 0;
-const $ = id => document.getElementById(id);
-async function startMic() {
-  const btn = $("mic");
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; cancelAnimationFrame(raf); btn.textContent = "Start tuner"; btn.classList.add("primary"); return; }
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-  } catch (e) { $("micErr").hidden = false; $("micErr").textContent = "The microphone is blocked. Allow mic access for this page, then press Start again."; return; }
-  $("micErr").hidden = true;
-  const c = ac(); analyser = c.createAnalyser(); analyser.fftSize = 4096;
-  c.createMediaStreamSource(micStream).connect(analyser);
-  btn.textContent = "Stop tuner"; btn.classList.remove("primary");
-  const data = new Float32Array(analyser.fftSize);
-  const loop = () => {
-    raf = requestAnimationFrame(loop);
-    analyser.getFloatTimeDomainData(data);
-    let s = 0; for (const v of data) s += v * v; const level = Math.sqrt(s / data.length);
-    const now = performance.now();
-    if (level > 0.008) {
-      const f = yin(data, c.sampleRate);
-      if (f) { smooth = smooth && Math.abs(1200 * Math.log2(f / smooth)) < 40 ? smooth * 0.7 + f * 0.3 : f; lastHeard = now; show(smooth); }
-    } else if (now - lastHeard > 1500) { smooth = null; }
-  };
-  loop();
-}
-function show(f) {
-  const m = 69 + 12 * Math.log2(f / 440);
-  let si = 0; OPEN.forEach((o, i) => { if (Math.abs(o - m) < Math.abs(OPEN[si] - m)) si = i; });
-  const near = Math.abs(OPEN[si] - m) < 2.5; const target = near ? OPEN[si] : Math.round(m);
-  const cents = (m - target) * 100;
-  $("note").innerHTML = `${NOTES[target % 12]}<sub>${Math.floor(target / 12) - 1}</sub>`;
-  $("hz").textContent = `${f.toFixed(1)} Hz · target ${mf(target).toFixed(1)} Hz · ${cents >= 0 ? "+" : ""}${cents.toFixed(0)}¢`;
-  $("needle").style.left = (50 + Math.max(-50, Math.min(50, cents))) + "%";
-  const v = $("verdict");
-  if (Math.abs(cents) <= 5) { v.className = "verdict good"; v.textContent = near ? `String ${6 - si} is in tune` : "In tune"; }
-  else if (cents < 0) { v.className = "verdict flat"; v.textContent = "Flat: tighten slowly"; }
-  else { v.className = "verdict sharp"; v.textContent = "Sharp: loosen slightly"; }
-  document.querySelectorAll(".strings button").forEach((b, i) => b.classList.toggle("target", near && i === si));
-}
-$("mic").onclick = startMic;
-
-// ---------- chord diagrams
-function diagram(ch) {
-  const { f, g } = CHORDS[ch]; const W = 120, H = 146, x0 = 18, y0 = 28, dx = 17, dy = 22;
-  const frets = f.filter(v => v); const maxF = Math.max(3, ...frets); const rows = Math.max(4, maxF);
-  let s = `<svg viewBox="0 0 ${W} ${y0 + rows * dy + 10}" role="img" aria-label="${ch} chord diagram">`;
-  s += `<rect x="${x0}" y="${y0 - 3}" width="${dx * 5}" height="4" fill="var(--ink)"/>`;
-  for (let r = 1; r <= rows; r++) s += `<line x1="${x0}" x2="${x0 + dx * 5}" y1="${y0 + r * dy}" y2="${y0 + r * dy}" stroke="var(--fret)" stroke-width="1.5"/>`;
-  for (let i = 0; i < 6; i++) s += `<line x1="${x0 + i * dx}" x2="${x0 + i * dx}" y1="${y0}" y2="${y0 + rows * dy}" stroke="var(--muted)" stroke-width="${1.6 - i * 0.15}"/>`;
-  f.forEach((v, i) => {
-    const x = x0 + i * dx;
-    if (v == null) s += `<text x="${x}" y="${y0 - 9}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="IBM Plex Mono, monospace">✕</text>`;
-    else if (v === 0) s += `<circle cx="${x}" cy="${y0 - 13}" r="4.5" fill="none" stroke="var(--ink)" stroke-width="1.4"/>`;
-    else { const y = y0 + (v - 0.5) * dy; s += `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--brass)"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--panel)" font-family="IBM Plex Sans, sans-serif">${g[i] || ""}</text>`; }
-  });
-  return s + "</svg>";
-}
-const levels = ["all", ...new Set(Object.values(CHORDS).map(c => c.lv))];
-let filter = "all";
-function renderChords() {
-  $("chords").innerHTML = "";
-  Object.keys(CHORDS).filter(k => filter === "all" || CHORDS[k].lv === filter).forEach(k => {
-    const b = document.createElement("button"); b.className = "chord";
-    b.innerHTML = `<span class="nm">${k}</span>${diagram(k)}<span class="lv">${CHORDS[k].lv}</span>`;
-    b.setAttribute("aria-label", `Hear ${k}`);
-    b.onclick = () => { const c = ac(), t = c.currentTime + 0.02; chordMidis(k).forEach((m, i) => pluck(m, t + i * 0.28, 0.8)); strum(k, t + chordMidis(k).length * 0.28 + 0.35); };
-    $("chords").appendChild(b);
-  });
-  $("filters").innerHTML = "";
-  levels.forEach(l => { const b = document.createElement("button"); b.textContent = l; b.className = l === filter ? "on" : ""; b.onclick = () => { filter = l; renderChords(); }; $("filters").appendChild(b); });
-}
-renderChords();
-
-// ---------- metronome + strums
-let bpm = 70, running = false, nextTime = 0, step = 0, timer, patName = "Quarter downs", progName = "Em – Asus2", playStrums = true;
-const beatsEl = $("beats"); for (let i = 0; i < 4; i++) { const d = document.createElement("div"); d.className = "beat"; beatsEl.appendChild(d); }
-function renderPattern() {
-  $("pattern").innerHTML = PATTERNS[patName].map((p, i) => `<div class="${p ? "" : "rest"}">${p || "·"}<em>${i % 2 ? "&" : i / 2 + 1}</em></div>`).join("");
-  $("patterns").innerHTML = ""; Object.keys(PATTERNS).forEach(n => { const b = document.createElement("button"); b.textContent = n; b.className = n === patName ? "on" : ""; b.onclick = () => { patName = n; renderPattern(); }; $("patterns").appendChild(b); });
-  $("prog").innerHTML = PROGS[progName].map(c => `<span>${c}</span>`).join("");
-  $("progs").innerHTML = ""; Object.keys(PROGS).forEach(n => { const b = document.createElement("button"); b.textContent = n; b.className = n === progName ? "on" : ""; b.onclick = () => { progName = n; renderPattern(); }; $("progs").appendChild(b); });
-}
-renderPattern();
-function click(t, accent) {
-  const c = ac(), o = c.createOscillator(), g = c.createGain();
-  o.frequency.value = accent ? 1600 : 1000; g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.3, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-  o.connect(g).connect(out()); o.start(t); o.stop(t + 0.06);
-}
-function schedule() {
-  const c = ac();
-  while (nextTime < c.currentTime + 0.12) {
-    const eighth = step % 8, bar = Math.floor(step / 8), prog = PROGS[progName], ch = prog[bar % prog.length];
-    if (eighth % 2 === 0) click(nextTime, eighth === 0);
-    const p = PATTERNS[patName][eighth];
-    if (playStrums && p) strum(ch, nextTime, p, p === "U" ? 0.45 : 0.65);
-    const st = step, delay = Math.max(0, (nextTime - c.currentTime) * 1000);
-    setTimeout(() => {
-      const e = st % 8, b = Math.floor(st / 8);
-      beatsEl.querySelectorAll(".beat").forEach((d, i) => d.classList.toggle("lit", i === Math.floor(e / 2)));
-      $("pattern").querySelectorAll("div").forEach((d, i) => d.classList.toggle("lit", i === e));
-      $("prog").querySelectorAll("span").forEach((d, i) => d.classList.toggle("lit", i === b % PROGS[progName].length));
-    }, delay);
-    nextTime += 30 / bpm; step++;
+W.tuner = el => {
+  el.className = "widget";
+  el.innerHTML = `<div class="widget-title"><span>Tuner</span><span>A4 = 440 Hz</span></div>
+  <div class="tuner"><div class="readout"><div class="note">–</div><div class="hz">press Start, then pluck one string</div>
+    <div class="meter" aria-hidden="true"><div class="zone"></div><div class="scale"></div><div class="needle"></div></div>
+    <div class="scale-labels"><span>−50¢ flat</span><span>in tune</span><span>sharp +50¢</span></div><div class="verdict" aria-live="polite"></div></div>
+  <div style="display:grid;gap:12px"><div class="row"><button class="primary mic">Start tuner</button></div><p class="err merr" hidden></p>
+    <p class="hint">Tap a string to hear its reference pitch. Flat means tighten the peg (pitch goes up); sharp means loosen it.</p>
+    <div class="strings">${OPEN.map((m, i) => `<button data-i="${i}" aria-label="Play string ${6 - i}, ${SNAME[i]}"><b>${SNAME[i]}</b><span>${6 - i} · ${mf(m).toFixed(1)}</span></button>`).join("")}</div></div></div>`;
+  for (let c = -50; c <= 50; c += 10) { const t = document.createElement("div"); t.className = "tick" + (c === 0 ? " c" : ""); t.style.left = (50 + c) + "%"; $(".scale", el).appendChild(t); }
+  $$(".strings button", el).forEach(b => b.onclick = () => pluck(OPEN[+b.dataset.i]));
+  function show(f) {
+    const m = 69 + 12 * Math.log2(f / 440);
+    let si = 0; OPEN.forEach((o, i) => { if (Math.abs(o - m) < Math.abs(OPEN[si] - m)) si = i; });
+    const near = Math.abs(OPEN[si] - m) < 2.5, target = near ? OPEN[si] : Math.round(m), cents = (m - target) * 100;
+    $(".note", el).innerHTML = `${NOTES[target % 12]}<sub>${Math.floor(target / 12) - 1}</sub>`;
+    $(".hz", el).textContent = `${f.toFixed(1)} Hz · target ${mf(target).toFixed(1)} Hz · ${cents >= 0 ? "+" : ""}${cents.toFixed(0)}¢`;
+    $(".needle", el).style.left = (50 + Math.max(-50, Math.min(50, cents))) + "%";
+    const v = $(".verdict", el);
+    if (Math.abs(cents) <= 5) { v.className = "verdict good"; v.textContent = near ? `String ${6 - si} is in tune` : "In tune"; }
+    else { v.className = "verdict off"; v.textContent = cents < 0 ? "Flat: tighten slowly" : "Sharp: loosen slightly"; }
+    $$(".strings button", el).forEach((b, i) => b.classList.toggle("target", near && i === si));
   }
-}
-$("go").onclick = () => {
-  running = !running; $("go").textContent = running ? "Stop" : "Start";
-  if (running) { step = 0; nextTime = ac().currentTime + 0.1; timer = setInterval(schedule, 25); } else clearInterval(timer);
+  $(".mic", el).onclick = async () => {
+    const btn = $(".mic", el);
+    if (mic) { stopMic(); btn.textContent = "Start tuner"; btn.classList.add("primary"); return; }
+    try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); mic = { stream }; }
+    catch (e) { const m = $(".merr", el); m.hidden = false; m.textContent = "The microphone is blocked. Allow microphone access for this site in your browser, then press Start again."; return; }
+    $(".merr", el).hidden = true;
+    const c = ac(), an = c.createAnalyser(); an.fftSize = 4096; c.createMediaStreamSource(mic.stream).connect(an);
+    btn.textContent = "Stop tuner"; btn.classList.remove("primary");
+    const data = new Float32Array(an.fftSize); let smooth = null, last = 0;
+    const loop = () => {
+      if (!mic) return; mic.raf = requestAnimationFrame(loop);
+      if (!document.body.contains(el)) { stopMic(); return; }
+      an.getFloatTimeDomainData(data); let s = 0; for (const v of data) s += v * v;
+      const now = performance.now();
+      if (Math.sqrt(s / data.length) > 0.008) { const f = yin(data, c.sampleRate); if (f) { smooth = smooth && Math.abs(1200 * Math.log2(f / smooth)) < 40 ? smooth * 0.7 + f * 0.3 : f; last = now; show(smooth); } }
+      else if (now - last > 1500) smooth = null;
+    };
+    loop();
+  };
 };
-$("bpm").oninput = e => { bpm = +e.target.value; $("bpmv").textContent = bpm; };
-let taps = [];
-$("tap").onclick = () => { const n = performance.now(); taps = taps.filter(t => n - t < 2500); taps.push(n);
-  if (taps.length > 1) { const iv = (taps.at(-1) - taps[0]) / (taps.length - 1); bpm = Math.max(40, Math.min(160, Math.round(60000 / iv))); $("bpm").value = bpm; $("bpmv").textContent = bpm; } };
-$("strumBtn").onclick = () => { playStrums = !playStrums; $("strumBtn").classList.toggle("on", playStrums); $("strumBtn").setAttribute("aria-pressed", playStrums); $("strumBtn").textContent = playStrums ? "Play strums" : "Click only"; };
 
-// ---------- lessons
-let done = [];
-try { done = JSON.parse(localStorage.getItem("gtr-done") || "[]"); } catch (e) {}
-function renderPath() {
-  $("path").innerHTML = LESSONS.map(([t, d], i) => `<li class="${done.includes(i) ? "done" : ""}"><label><input type="checkbox" id="l${i}" ${done.includes(i) ? "checked" : ""}><b>${t}</b><span>${d}</span></label></li>`).join("");
-  LESSONS.forEach((_, i) => $("l" + i).onchange = e => { done = e.target.checked ? [...done, i] : done.filter(x => x !== i); try { localStorage.setItem("gtr-done", JSON.stringify(done)); } catch (er) {} renderPath(); });
-  $("pct").textContent = `${done.length} of ${LESSONS.length} done`;
+// quizzes: {type: majmin | fretnotes | chords, strings, set, naturals}
+W.quiz = (el, o) => {
+  let right = 0, total = 0, answer = null, replay = null;
+  const naturals = ["C", "D", "E", "F", "G", "A", "B"];
+  const titles = { majmin: "Ear quiz: major or minor?", fretnotes: "Quiz: name the note", chords: "Ear quiz: which chord?" };
+  el.className = "widget";
+  el.innerHTML = `<div class="widget-title"><span>${titles[o.type]}</span><span class="score">0 / 0</span></div>
+    <div class="row"><button class="primary nx">New question</button><button class="rp" hidden>▶ Hear again</button><span class="big q"></span></div>
+    <div class="answers"></div><p class="hint fb2" aria-live="polite"></p>`;
+  const opts = o.type === "majmin" ? ["Major", "Minor"] : o.type === "chords" ? o.set : (o.naturals === false ? NOTES : naturals);
+  $(".answers", el).innerHTML = opts.map(a => `<button data-a="${esc(a)}" disabled>${esc(o.type === "chords" ? chordName(a) : a)}</button>`).join("");
+  function ask() {
+    $$(".answers button", el).forEach(b => { b.disabled = false; b.className = ""; }); $(".fb2", el).textContent = "";
+    if (o.type === "majmin") {
+      const r = 45 + Math.floor(Math.random() * 12), minor = Math.random() < 0.5, third = minor ? 3 : 4;
+      answer = minor ? "Minor" : "Major"; replay = () => { const t = ac().currentTime + 0.05; [r, r + 7, r + 12, r + 12 + third, r + 19].forEach((m, i) => pluck(m, t + i * 0.02)); };
+      $(".q", el).textContent = "?"; $(".rp", el).hidden = false; replay();
+    } else if (o.type === "chords") {
+      answer = o.set[Math.floor(Math.random() * o.set.length)]; replay = () => strum(answer, ac().currentTime + 0.05);
+      $(".q", el).textContent = "?"; $(".rp", el).hidden = false; replay();
+    } else {
+      const strs = o.strings || [6, 5]; let s, f, n;
+      do { s = strs[Math.floor(Math.random() * strs.length)]; f = Math.floor(Math.random() * ((o.to || 12) + 1)); n = NOTES[midiOf(s, f) % 12]; } while (o.naturals !== false && n.includes("#"));
+      answer = n; replay = () => pluck(midiOf(s, f)); $(".q", el).textContent = `string ${s}, fret ${f}`; $(".q", el).style.fontSize = "26px"; $(".rp", el).hidden = true;
+    }
+  }
+  $(".nx", el).onclick = ask; $(".rp", el).onclick = () => replay && replay();
+  $$(".answers button", el).forEach(b => b.onclick = () => {
+    if (answer == null) return; total++; const ok = b.dataset.a === answer; if (ok) right++;
+    b.classList.add(ok ? "right" : "wrong"); if (!ok) $(`.answers button[data-a="${CSS.escape(answer)}"]`, el).classList.add("right");
+    $$(".answers button", el).forEach(x => x.disabled = true);
+    $(".fb2", el).textContent = ok ? "Correct." : `It was ${o.type === "chords" ? chordName(answer) : answer}.`;
+    if (o.type === "fretnotes") replay();
+    $(".score", el).textContent = `${right} / ${total}`; answer = null;
+  });
+};
+
+// ================================================================= views
+const C = window.COURSE;
+const ALL = C.units.flatMap((u, ui) => u.lessons.map((l, li) => ({ ...l, unit: u, ui, li })));
+const done = () => store.get("done", []);
+function setDone(id, v) { const d = done().filter(x => x !== id); if (v) d.push(id); store.set("done", d); }
+
+function renderBlock(b) {
+  const el = document.createElement("div");
+  if (b.p) { el.innerHTML = `<p>${md(b.p)}</p>`; return el.firstChild; }
+  if (b.h) { el.innerHTML = `<h3>${md(b.h)}</h3>`; return el.firstChild; }
+  if (b.list) { el.innerHTML = `<ul>${b.list.map(x => `<li>${md(x)}</li>`).join("")}</ul>`; return el.firstChild; }
+  if (b.steps) { el.innerHTML = `<ol>${b.steps.map(x => `<li>${md(x)}</li>`).join("")}</ol>`; return el.firstChild; }
+  if (b.tip) { el.className = "tip"; el.innerHTML = md(b.tip); return el; }
+  for (const k of ["chords", "play", "tab", "fret", "changes", "quiz"]) if (b[k]) { W[k](el, b[k]); return el; }
+  if (b.tuner) { W.tuner(el); return el; }
+  return el;
 }
-renderPath();
 
-// ---------- install + offline
+function home() {
+  const d = done(), next = ALL.find(l => !d.includes(l.id)) || ALL[0];
+  const pct = Math.round(100 * d.filter(id => ALL.some(l => l.id === id)).length / ALL.length);
+  const v = $("#view"); v.innerHTML = `
+  <div class="hero"><div class="eyebrow">Acoustic guitar · ${C.units.length} units · ${ALL.length} lessons</div><h1>Practice Studio</h1>
+    <p>${md(C.intro)}</p></div>
+  <section class="card continue"><div style="display:grid;gap:8px;min-width:0"><div class="eyebrow">${d.length ? "Continue" : "Start here"} · Unit ${next.ui + 1}, lesson ${next.li + 1}</div>
+    <h2>${md(next.title)}</h2><div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Course progress"><i style="width:${pct}%"></i></div><span class="hint">${pct}% of the course complete</span></div>
+    <a class="btn primary" href="#l-${next.id}">${d.length ? "Continue" : "Start lesson 1"} →</a></section>
+  <section class="card"><h2>A 20-minute practice day</h2><p class="muted">Short daily sessions beat one long weekend session. Fingertips toughen and muscle memory forms overnight.</p>
+    <div class="routine">${C.routine.map(r => `<div><b>${r[0]}</b><span>${md(r[1])}</span></div>`).join("")}</div></section>
+  <div class="units">${C.units.map((u, ui) => `<article class="unit"><header><div class="eyebrow">Unit ${ui + 1} · ${u.lessons.filter(l => d.includes(l.id)).length}/${u.lessons.length} done</div><h2>${md(u.title)}</h2><p>${md(u.blurb)}</p></header>
+    <ol>${u.lessons.map((l, li) => `<li class="${d.includes(l.id) ? "done" : ""}"><a href="#l-${l.id}"><span class="dot">${d.includes(l.id) ? "✓" : li + 1}</span><span>${md(l.title)}</span><small>${l.mins} min</small></a></li>`).join("")}</ol></article>`).join("")}</div>`;
+}
+
+function lesson(id) {
+  const i = ALL.findIndex(l => l.id === id); if (i < 0) return home();
+  const l = ALL[i], prev = ALL[i - 1], next = ALL[i + 1], isDone = done().includes(l.id), checks = store.get("chk-" + l.id, []);
+  const v = $("#view");
+  v.innerHTML = `<article class="lesson read">
+    <div class="lesson-head"><a class="eyebrow" href="#home" style="text-decoration:none">Unit ${l.ui + 1}: ${esc(l.unit.title)} · Lesson ${l.li + 1} of ${l.unit.lessons.length}</a>
+      <h1>${md(l.title)}</h1><div class="meta"><span>≈ ${l.mins} min</span>${l.bpm ? `<span>target tempo ${l.bpm} BPM</span>` : ""}${isDone ? `<span style="color:var(--good)">✓ completed</span>` : ""}</div>
+      <p class="goal">${md(l.goal)}</p></div>
+    <div class="body"></div>
+    <section class="card ready"><h2>You're ready to move on when…</h2>${l.ready.map((r, j) => `<label><input type="checkbox" id="chk-${l.id}-${j}" ${checks.includes(j) ? "checked" : ""}><span>${md(r)}</span></label>`).join("")}
+      <div class="row"><button class="${isDone ? "" : "primary"} mark">${isDone ? "Mark as not done" : "Mark lesson complete"}</button></div></section>
+    <nav class="pager" aria-label="Lessons">${prev ? `<a class="btn" href="#l-${prev.id}">← ${md(prev.title)}</a>` : "<span></span>"}${next ? `<a class="btn" href="#l-${next.id}">${md(next.title)} →</a>` : `<a class="btn" href="#home">Course map</a>`}</nav>
+  </article>`;
+  const body = $(".body", v); l.body.forEach(b => body.appendChild(renderBlock(b)));
+  $$(".ready input", v).forEach((c, j) => c.onchange = () => { const s = new Set(store.get("chk-" + l.id, [])); c.checked ? s.add(j) : s.delete(j); store.set("chk-" + l.id, [...s]); });
+  $(".mark", v).onclick = () => { setDone(l.id, !isDone); if (!isDone && next) location.hash = "#l-" + next.id; else lesson(id); };
+}
+
+function tools() {
+  const v = $("#view");
+  v.innerHTML = `<div class="hero"><div class="eyebrow">Standard tuning · E A D G B E</div><h1>Tools</h1><p>Tune up, look up any chord, and jam over your own progressions.</p></div>
+    <div id="t-tuner"></div>
+    <section class="card"><h2>Chord library <span class="hint" style="font:400 14px var(--body)">tap to hear</span></h2><div class="filters"></div><div id="t-chords"></div>
+      <p class="hint">Numbers are fingers: 1 index, 2 middle, 3 ring, 4 pinky. ○ ring open, ✕ don't play. A bar shape means one finger presses several strings.</p></section>
+    <div id="t-play"></div>`;
+  W.tuner($("#t-tuner"));
+  const groups = { all: "All", open: "Open", seventh: "7th", sus: "Sus & add", power: "Power", barre: "Barre" };
+  let g = "all";
+  const draw = () => { W.chords($("#t-chords"), Object.keys(CHORDS).filter(k => g === "all" || CHORDS[k].grp === g));
+    $(".filters", v).innerHTML = Object.entries(groups).map(([k, n]) => `<button class="${k === g ? "on" : ""}" data-g="${k}">${n}</button>`).join("");
+    $$(".filters button", v).forEach(b => b.onclick = () => { g = b.dataset.g; draw(); }); };
+  draw();
+  W.play($("#t-play"), { title: "Jam: metronome + strummer", editable: true, prog: ["G", "Em", "C", "D"], pattern: window.PATTERNS["Folk strum"].p, bpm: 80 });
+}
+
+function route() {
+  stopAll(); stopMic();
+  const h = location.hash.slice(1);
+  $("#nav-home").classList.toggle("on", h !== "tools"); $("#nav-tools").classList.toggle("on", h === "tools");
+  if (h === "tools") tools(); else if (h.startsWith("l-")) lesson(h.slice(2)); else home();
+  window.scrollTo(0, 0);
+  const t = h.startsWith("l-") && ALL.find(l => l.id === h.slice(2)); document.title = t ? `${t.title} · Practice Studio` : "Practice Studio";
+}
+window.addEventListener("hashchange", route);
+route();
+
+// ================================================================= install + offline
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 let installEvt;
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("install").hidden = false; });
-$("install").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("install").hidden = true; };
-window.addEventListener("appinstalled", () => { $("install").hidden = true; });
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("#install").hidden = false; });
+$("#install").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("#install").hidden = true; };
+window.addEventListener("appinstalled", () => { $("#install").hidden = true; });
 </script>
 </body>
 </html>
