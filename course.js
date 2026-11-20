@@ -97,6 +97,7 @@ window.COURSE = {
             { p: "Tab shows six lines, one per string, with the **high e on top**, as if you looked down at the guitar from above. The numbers are frets; 0 means open. Read left to right; stacked numbers are played together." },
             { tab: { title: "Example: read it, then press Start", notes: "3.0 2.1 1.0 2.1 | 3.0 2.1 1.0:2", unit: 1, bpm: 70 } },
             { p: "This tab says: open G string, B string at the 1st fret, open high e, and back. Every play-along starts with **one bar of clicks** to count you in." },
+            { tip: "**Play with mic:** every tab and play-along has a *Play with mic* button. Notes scroll toward a line; play each one as it arrives and the app listens, then tells you if you were on time, on pitch and playing the right chord. Try it with the example above." },
           ],
           ready: ["I can tell which finger goes where from a chord diagram.", "I can play the example tab by reading it."],
         },

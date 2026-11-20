@@ -17,6 +17,8 @@ A complete beginner acoustic guitar course that runs in the browser and installs
 
 Every lesson has something to play: chord diagrams you can hear, play-along tracks with a count-in and adjustable tempo, tabs that play back, fretboard maps, a one-minute chord-change timer, and ear-training quizzes. Progress is saved on your device.
 
+**Play with mic:** every tab and play-along has a *Play with mic* mode. Notes and strums scroll along six string lanes toward a hit line while the app listens through your microphone. Each one is scored for timing (Perfect / Good / early / late), pitch (cents sharp or flat, or which wrong note you played) and, for strums, whether the chord's notes are there. A live panel shows the note you're playing, a pitch needle against the target and the notes heard. Score, streak multiplier, accuracy and average timing update as you play, and a timing correction compensates for your device's audio delay.
+
 **Tools:** live microphone tuner, 39-chord library, and a jam mode for your own progressions.
 
 ## Files

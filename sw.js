@@ -1,5 +1,5 @@
 // Offline support: app shell is cached; fonts are cached on first use.
-const CACHE = "guitar-studio-v2";
+const CACHE = "guitar-studio-v3";
 const SHELL = ["./", "index.html", "course.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
