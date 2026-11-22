@@ -572,25 +572,110 @@ W.fret = (el, o) => {
   $$(".mk", el).forEach(g => g.onclick = () => pluck(+g.dataset.m));
 };
 
-// one-minute chord change timer: [chordA, chordB]
+// Listens for strums and reports a fundamentals-only chroma for each one (~0.3 s after the attack).
+function strumListener(onStrum, onLevel) {
+  let stream, timer, an1, an2, b1, fq, binHz, hist = [], lastOn = -9, acc = null, accN = 0, accFrom = 0, accTo = 0, ring = [], before = null;
+  async function start() {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const c = ac(), src = c.createMediaStreamSource(stream);
+    const lp1 = c.createBiquadFilter(), lp2 = c.createBiquadFilter(); lp1.type = lp2.type = "lowpass"; lp1.frequency.value = lp2.frequency.value = 1100;
+    an1 = c.createAnalyser(); an1.fftSize = 2048; src.connect(lp1).connect(lp2).connect(an1);
+    an2 = c.createAnalyser(); an2.fftSize = 8192; an2.smoothingTimeConstant = 0; src.connect(an2);
+    b1 = new Float32Array(2048); fq = new Float32Array(4096); binHz = c.sampleRate / 8192;
+    t0 = c.currentTime; timer = setInterval(tick, 15);
+  }
+  let t0 = 0;
+  function tick() {
+    const t = ac().currentTime;
+    an1.getFloatTimeDomainData(b1);
+    let s = 0; for (let i = b1.length - 512; i < b1.length; i++) s += b1[i] * b1[i];
+    const r = Math.sqrt(s / 512), lo = hist.length ? Math.min(...hist) : 0;
+    hist.push(r); if (hist.length > 5) hist.shift();
+    onLevel && onLevel(r);
+    // note energies every tick, kept briefly so we know what was already ringing before a strum
+    an2.getFloatFrequencyData(fq);
+    const ne = new Float32Array(44);
+    for (let k = 0; k < 44; k++) { const b = Math.round(mf(40 + k) / binHz); const v = k < 15 ? Math.pow(10, fq[b] / 20) : Math.max(Math.pow(10, fq[b - 1] / 20), Math.pow(10, fq[b] / 20), Math.pow(10, fq[b + 1] / 20)); ne[k] = v * v; }
+    ring.push({ t, ne }); while (ring.length && ring[0].t < t - 0.5) ring.shift();
+    if (t > t0 + 0.4 && r > 0.01 && r > lo * 1.35 && r - lo > 0.006 && t - lastOn > 0.25) { // ignore the first moment while the mic settles
+      lastOn = t; acc = new Float32Array(44); accN = 0; accFrom = t + 0.04; accTo = t + 0.3;
+      const pre = ring.filter(x => x.t >= t - 0.16 && x.t <= t - 0.03); before = null;
+      if (pre.length) { before = new Float32Array(44); pre.forEach(x => { for (let k = 0; k < 44; k++) before[k] += x.ne[k] / pre.length; }); }
+    }
+    if (acc && t >= accFrom) {
+      for (let k = 0; k < 44; k++) acc[k] += ne[k];
+      accN++;
+      if (t >= accTo) {
+        for (let k = 0; k < 44; k++) acc[k] /= accN;
+        let e = acc; acc = null; accN = 1;
+        if (before) { const d = e.map((v, k) => Math.max(0, v - 0.7 * before[k])); if (d.reduce((x, y) => x + y, 0) > 0.15 * e.reduce((x, y) => x + y, 0)) e = d; }
+        const raw = Float32Array.from(e);
+        for (let k = 0; k < 44; k++) for (const [h, w] of [[12, 0.35], [19, 0.45], [24, 0.2], [28, 0.25]]) if (k + h < 44) e[k + h] = Math.max(0, e[k + h] - w * raw[k]);
+        const ch = new Float32Array(12); for (let k = 0; k < 44; k++) ch[(40 + k) % 12] += Math.sqrt(e[k] / accN) * (k < 24 ? 1 : 0.7);
+        const mx = Math.max(...ch) || 1; onStrum(ch.map(v => v / mx));
+      }
+    }
+  }
+  function stop() { clearInterval(timer); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+  return { start, stop };
+}
+// how well a set of note names (0-11) fits a normalised chroma
+function chordFit(cr, set) { let a = 0, b = 0; for (let k = 0; k < 12; k++) set.has(k) ? a += cr[k] : b += cr[k]; return a / set.size - b / (12 - set.size); }
+
+// one-minute chord change timer: [chordA, chordB]; counts by ear with the mic, or by tapping
 W.changes = (el, pair) => {
-  const key = "best-" + pair.join("-"); let best = store.get(key, 0), count = 0, end = 0, timer;
+  const key = "best-" + pair.join("-"); let best = store.get(key, 0), count = 0, end = 0, timer, ear = store.get("ear-count", true), lis = null, lastHeard = null;
+  const sets = pair.map(k => new Set(chordMidis(k).map(m => m % 12)));
   el.className = "widget";
   el.innerHTML = `<div class="widget-title"><span>One-minute changes: ${pair.map(chordName).join(" ↔ ")}</span><span class="bestv">best: ${best}</span></div>
-    <p class="hint">Press Start, then switch back and forth as fast as you can while keeping each chord clean. Tap the big button (or press space) on every change.</p>
-    <div class="row"><button class="primary go">▶ Start 60 s</button><button class="cnt" disabled style="font-size:18px;padding:12px 22px">Changed! <b class="n">0</b></button><span class="big t">60</span></div>`;
-  const tap = () => { if (!end) return; count++; $(".n", el).textContent = count; };
+    <p class="hint ch-help"></p>
+    <div class="row"><button class="primary go">▶ Start 60 s</button><button class="ear" aria-pressed="${ear}"></button></div>
+    <div class="row"><button class="cnt" disabled style="font-size:18px;padding:12px 22px">Changes <b class="n">0</b></button><span class="big t">60</span>
+      <span class="ch-heard" aria-live="polite" style="display:grid;gap:2px"><b class="ch-name" style="font:700 22px var(--display)"></b><span class="hint ch-sub"></span></span></div>
+    <p class="err ch-err" hidden></p>`;
+  const help = () => {
+    $(".ch-help", el).textContent = ear
+      ? "Press Start, then switch back and forth as fast as you can, strumming once on each chord. I listen and count every change; a strum I can't recognise isn't counted, so keep each chord clean."
+      : "Press Start, then switch back and forth as fast as you can while keeping each chord clean. Tap the button (or press space) on every change.";
+    const b = $(".ear", el); b.textContent = ear ? "Counting with mic" : "Counting by tapping"; b.classList.toggle("on", ear); b.setAttribute("aria-pressed", ear);
+    $(".cnt", el).innerHTML = `${ear ? "Changes" : "Changed!"} <b class="n">${count}</b>`;
+  };
+  help();
+  const setCount = n => { count = n; $(".n", el).textContent = n; };
+  const tap = () => { if (!end || ear) return; setCount(count + 1); };
   $(".cnt", el).onclick = tap;
-  const key2 = e => { if (e.code === "Space" && end && document.body.contains(el)) { e.preventDefault(); tap(); } };
+  const key2 = e => { if (e.code === "Space" && end && !ear && document.body.contains(el)) { e.preventDefault(); tap(); } };
   document.addEventListener("keydown", key2);
-  $(".go", el).onclick = () => {
-    count = 0; $(".n", el).textContent = 0; end = performance.now() + 60000; $(".cnt", el).disabled = false; $(".cnt", el).focus();
+  $(".ear", el).onclick = () => { if (end) return; ear = !ear; store.set("ear-count", ear); help(); };
+  function heard(cr) {
+    if (!end) return;
+    const f = sets.map(s => chordFit(cr, s)), i = f[0] >= f[1] ? 0 : 1;
+    const name = $(".ch-name", el), sub = $(".ch-sub", el);
+    if (Math.max(...f) < 0.12 || Math.abs(f[0] - f[1]) < 0.03) { name.textContent = "?"; name.style.color = "var(--warn)"; sub.textContent = "couldn't tell which chord: check every string rings"; return; }
+    const k = pair[i]; name.style.color = "var(--good)";
+    if (lastHeard != null && k !== lastHeard) { setCount(count + 1); name.textContent = `${chordName(k)} ✓`; sub.textContent = "change counted"; }
+    else { name.textContent = chordName(k); sub.textContent = lastHeard == null ? "starting chord" : "same chord again: switch!"; }
+    lastHeard = k;
+  }
+  function finish() {
+    clearInterval(timer); end = 0; if (lis) { lis.stop(); lis = null; }
+    $(".cnt", el).disabled = true; $(".go", el).disabled = false; const c = ac(); click(c.currentTime, true); click(c.currentTime + 0.15, true);
+    if (count > best) { best = count; store.set(key, best); } $(".bestv", el).textContent = `best: ${best} · this round: ${count}`;
+  }
+  $(".go", el).onclick = async () => {
+    setCount(0); lastHeard = null; $(".ch-name", el).textContent = ""; $(".ch-sub", el).textContent = ""; $(".ch-err", el).hidden = true;
+    if (ear) {
+      stopAll(); stopMic();
+      lis = strumListener(heard);
+      try { await lis.start(); } catch (e) { lis = null; const m = $(".ch-err", el); m.hidden = false; m.textContent = "I can't hear you: the microphone is blocked. Allow microphone access for this site, or switch to Counting by tapping."; return; }
+      $(".ch-sub", el).textContent = "listening… strum your first chord";
+    }
+    end = performance.now() + 60000; $(".cnt", el).disabled = ear; $(".go", el).disabled = true; if (!ear) $(".cnt", el).focus();
     clearInterval(timer);
     timer = setInterval(() => {
-      if (!document.body.contains(el)) { clearInterval(timer); document.removeEventListener("keydown", key2); return; }
+      if (!document.body.contains(el)) { clearInterval(timer); document.removeEventListener("keydown", key2); if (lis) lis.stop(); return; }
       const left = Math.max(0, Math.ceil((end - performance.now()) / 1000)); $(".t", el).textContent = left;
-      if (!left) { clearInterval(timer); end = 0; $(".cnt", el).disabled = true; const c = ac(); click(c.currentTime, true); click(c.currentTime + 0.15, true);
-        if (count > best) { best = count; store.set(key, best); } $(".bestv", el).textContent = `best: ${best} · this round: ${count}`; }
+      if (!left) finish();
     }, 200);
   };
 };
