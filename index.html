@@ -160,6 +160,14 @@ input[type=text], select { font: 15px var(--body); color: var(--ink); background
 .answers button.wrong { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent) }
 .score { font: 500 14px var(--mono); color: var(--muted) }
 
+.seen .dot { border-color: var(--brass); color: var(--brass) }
+.log { display: grid; gap: 4px }
+.log a { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 10px; margin: 0 -10px; border-radius: 7px; color: var(--ink); text-decoration: none }
+.log a:hover { background: var(--bg) }
+.log span { display: grid; min-width: 0 }
+.log small { color: var(--muted); font-size: 12.5px }
+.lg-n { text-align: right; font: 700 20px var(--display); font-variant-numeric: tabular-nums }
+.lg-n small { font: 400 11.5px var(--body) }
 /* play with mic */
 .game-btn { border-color: var(--brass); color: var(--brass); font-weight: 600 }
 .game-ov { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto;
@@ -209,7 +217,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\*(.+?)\*/g, "<i>$1</i>").replace(/`(.+?)`/g, "<code>$1</code>");
 const store = {
   get(k, d) { try { const v = localStorage.getItem("gs-" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem("gs-" + k, JSON.stringify(v)); } catch (e) {} },
+  set(k, v) { try { localStorage.setItem("gs-" + k, JSON.stringify(v)); } catch (e) { store.ok = false; } if (!store.asked) { store.asked = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {} } },
+  ok: (() => { try { localStorage.setItem("gs-probe", "1"); const ok = localStorage.getItem("gs-probe") === "1"; localStorage.removeItem("gs-probe"); return ok; } catch (e) { return false; } })(),
+  dump() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("gs-")) o[k] = localStorage.getItem(k); } } catch (e) {} return o; },
 };
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const OPEN = [40, 45, 50, 55, 59, 64];          // string 6 → 1
@@ -393,7 +403,10 @@ function countLabels(n, sub) {
 const tokLabel = t => ({ D: "↓", U: "↑", X: "✕", ".": "·" }[t] || t.replace(/B/g, "T").replace(/b/g, "t"));
 
 // play-along: {prog, pattern, bpm, sub, perBar, swing, title, editable}
-const GAME_ROW = `<div class="row"><button class="game-btn">◎ Play with mic</button><span class="hint">I listen while you play and score your timing and notes</span></div>`;
+const GAME_ROW = `<div class="row"><button class="game-btn">◎ Play with mic</button><span class="hint g-best">I listen while you play and score your timing and notes</span></div>`;
+const logKey = title => `${location.hash.slice(1) || "tools"}|${title}`;
+function bestText(key) { const r = store.get("log", {})[key]; return r ? `Your best: ${r.best}% at ${r.bestBpm} BPM · last ${r.last}% at ${r.lastBpm} BPM · ${r.runs} run${r.runs > 1 ? "s" : ""}` : null; }
+function showBest(el, key) { const t = bestText(key), h = $(".g-best", el); if (t && h) { h.textContent = t; h.style.color = "var(--good)"; } }
 W.play = (el, o) => {
   let prog = o.prog.slice(), pattern = o.pattern.trim().split(/\s+/), swing = !!o.swing, curSub = o.sub || 2;
   const perBar = o.perBar || 1;
@@ -445,7 +458,7 @@ W.play = (el, o) => {
       if (m != null) pluck(m, when, ch === "B" || ch === "b" ? 0.75 : 0.6);
     });
   }
-  render();
+  render(); showBest(el, logKey(o.title || "Play along"));
   $(".go", el).onclick = () => {
     if (loop && loop.running) { loop.stop(); return; }
     if (!applyEdits()) return;
@@ -462,7 +475,7 @@ W.play = (el, o) => {
     if (!applyEdits()) return;
     if (loop) loop.stop();
     const L = evList();
-    Game.open({ title: o.title || "Play along", bpm: st.bpm, bpb: L.bpb, length: L.length, sound: (ev, when) => sound(ev.src, when), events: L.events.map(playGameEvent) });
+    Game.open({ key: logKey(o.title || "Play along"), onSaved: () => showBest(el, logKey(o.title || "Play along")), title: o.title || "Play along", bpm: st.bpm, bpb: L.bpb, length: L.length, sound: (ev, when) => sound(ev.src, when), events: L.events.map(playGameEvent) });
   };
 };
 // strings of a chord, low to high (6 → 1)
@@ -511,6 +524,7 @@ W.tab = (el, o) => {
   $(".beats", el).innerHTML = Array.from({ length: bpb }, () => `<i class="beat"></i>`).join("");
   const groups = $$(".ev", el);
   const sound = (e, when) => e.notes.forEach(n => pluck(midiOf(n.s, n.f), when, n.soft ? 0.5 : 0.8));
+  showBest(el, logKey(o.title || "Tab"));
   let loop;
   $(".go", el).onclick = () => {
     if (loop && loop.running) { loop.stop(); return; }
@@ -523,7 +537,7 @@ W.tab = (el, o) => {
   };
   $(".game-btn", el).onclick = () => {
     if (loop) loop.stop();
-    Game.open({ title: o.title || "Tab", bpm: st.bpm, bpb, length: lenBeats, sound: (ev, when) => sound(ev.src, when),
+    Game.open({ key: logKey(o.title || "Tab"), onSaved: () => showBest(el, logKey(o.title || "Tab")), title: o.title || "Tab", bpm: st.bpm, bpb, length: lenBeats, sound: (ev, when) => sound(ev.src, when),
       events: tab.evs.map(e => ({ t: e.t / unit, kind: e.notes.length > 1 ? "chord" : "note", midis: e.notes.map(n => midiOf(n.s, n.f)),
         lanes: e.notes.map(n => n.s), labels: Object.fromEntries(e.notes.map(n => [n.s, n.lab])), soft: e.notes.some(n => n.soft), label: "", src: e })) });
   };
@@ -708,7 +722,7 @@ const Game = (() => {
     const ov = document.createElement("div");
     ov.className = "game-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Play with mic");
     ov.innerHTML = `<div class="game-box">
-      <div class="game-head"><div><div class="eyebrow">Play with mic</div><h2>${esc(spec.title)}</h2></div><button class="gx" aria-label="Close">✕ Close</button></div>
+      <div class="game-head"><div><div class="eyebrow">Play with mic</div><h2>${esc(spec.title)}</h2><span class="hint g-bestline"></span></div><button class="gx" aria-label="Close">✕ Close</button></div>
       <div class="hud"><div><b class="h-sc">0</b><span>score</span></div><div><b class="h-st">0</b><span>streak</span></div><div><b class="h-ac">–</b><span>accuracy</span></div><div><b class="h-tm">–</b><span>average timing</span></div></div>
       <div class="lane-wrap"><canvas class="lane" aria-label="Note lane: notes scroll to the line; play each one as it reaches the line"></canvas></div>
       <div class="live">
@@ -726,7 +740,7 @@ const Game = (() => {
     document.body.appendChild(ov); document.body.style.overflow = "hidden";
     S = { ov, spec, inst: [], frames: [], onsets: [], used: new Set(), pops: [], running: false, guitar: false,
       corr: store.get("latcorr", 0), bpm: spec.bpm, col: colors(), flash: 0, lastLive: 0 };
-    resetStats();
+    resetStats(); showBestLine();
     S.cv = $(".lane", ov); S.g = S.cv.getContext("2d");
     const size = () => { const r = S.cv.parentElement.getBoundingClientRect(), d = devicePixelRatio || 1, h = Math.max(230, Math.min(340, innerHeight * 0.38));
       S.W = r.width; S.H = h; S.cv.width = r.width * d; S.cv.height = h * d; S.cv.style.height = h + "px"; S.g.setTransform(d, 0, 0, d, 0, 0); };
@@ -774,8 +788,17 @@ const Game = (() => {
     }, 15);
     $(".g-go", S.ov).textContent = "■ Stop"; $(".g-bpm", S.ov).disabled = true;
   }
+  function save() {
+    const st = S.stats; if (!S.spec.key || st.n < 4) return;
+    const acc = Math.round(100 * st.pts / (100 * st.n)), log = store.get("log", {}), r = log[S.spec.key] || { best: 0, bestBpm: S.bpm, runs: 0 };
+    if (acc > r.best || (acc === r.best && S.bpm > r.bestBpm)) { r.best = acc; r.bestBpm = S.bpm; }
+    r.bestScore = Math.max(r.bestScore || 0, st.score); r.last = acc; r.lastBpm = S.bpm; r.runs++; r.at = Date.now(); r.title = S.spec.title;
+    log[S.spec.key] = r; store.set("log", log);
+    S.spec.onSaved && S.spec.onSaved(); showBestLine();
+  }
+  function showBestLine() { const t = S.spec.key && bestText(S.spec.key); $(".g-bestline", S.ov).textContent = t || "Your best score for this exercise is saved when you stop."; }
   function stop() {
-    if (!S) return; S.running = false; clearInterval(S.timer); clearInterval(S.ana);
+    if (!S) return; if (S.running) save(); S.running = false; clearInterval(S.timer); clearInterval(S.ana);
     $(".g-go", S.ov).textContent = "▶ Start"; $(".g-bpm", S.ov).disabled = false;
   }
   function close() {
@@ -1040,6 +1063,8 @@ const C = window.COURSE;
 const ALL = C.units.flatMap((u, ui) => u.lessons.map((l, li) => ({ ...l, unit: u, ui, li })));
 const done = () => store.get("done", []);
 function setDone(id, v) { const d = done().filter(x => x !== id); if (v) d.push(id); store.set("done", d); }
+const seen = () => store.get("seen", []);
+const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 2 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
 
 function renderBlock(b) {
   const el = document.createElement("div");
@@ -1054,18 +1079,42 @@ function renderBlock(b) {
 }
 
 function home() {
-  const d = done(), next = ALL.find(l => !d.includes(l.id)) || ALL[0];
+  const d = done(), sn = seen(), lastId = store.get("last", null), last = ALL.find(l => l.id === lastId);
+  const next = last && !d.includes(last.id) ? last : (ALL.find((l, i) => !d.includes(l.id) && (!last || i > ALL.indexOf(last))) || ALL.find(l => !d.includes(l.id)) || ALL[0]);
   const pct = Math.round(100 * d.filter(id => ALL.some(l => l.id === id)).length / ALL.length);
+  const log = Object.entries(store.get("log", {})).sort((a, b) => b[1].at - a[1].at).slice(0, 6);
   const v = $("#view"); v.innerHTML = `
+  ${store.ok ? "" : `<p class="tip" style="border:1px solid var(--warn)"><b>Your progress isn't being saved.</b> This browser is blocking site storage, which usually means a private window or a setting that clears site data. Open the app in a normal window, or install it, to keep your progress.</p>`}
   <div class="hero"><div class="eyebrow">Acoustic guitar · ${C.units.length} units · ${ALL.length} lessons</div><h1>Practice Studio</h1>
     <p>${md(C.intro)}</p></div>
-  <section class="card continue"><div style="display:grid;gap:8px;min-width:0"><div class="eyebrow">${d.length ? "Continue" : "Start here"} · Unit ${next.ui + 1}, lesson ${next.li + 1}</div>
-    <h2>${md(next.title)}</h2><div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Course progress"><i style="width:${pct}%"></i></div><span class="hint">${pct}% of the course complete</span></div>
-    <a class="btn primary" href="#l-${next.id}">${d.length ? "Continue" : "Start lesson 1"} →</a></section>
+  <section class="card continue"><div style="display:grid;gap:8px;min-width:0"><div class="eyebrow">${sn.length ? "Pick up where you left off" : "Start here"} · Unit ${next.ui + 1}, lesson ${next.li + 1}</div>
+    <h2>${md(next.title)}</h2><div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Course progress"><i style="width:${pct}%"></i></div><span class="hint">${d.length} of ${ALL.length} lessons complete (${pct}%)</span></div>
+    <a class="btn primary" href="#l-${next.id}">${sn.length ? "Continue" : "Start lesson 1"} →</a></section>
+  ${log.length ? `<section class="card"><h2>Practice log</h2><p class="muted">Your Play with mic results, newest first.</p><div class="log">${log.map(([k, r]) => { const lid = k.split("|")[0], ls = ALL.find(l => "l-" + l.id === lid);
+      return `<a href="#${esc(lid)}"><span><b>${esc(r.title || "")}</b><small>${ls ? esc(ls.title) : "Tools"} · ${ago(r.at)}</small></span><span class="lg-n">${r.best}%<small>best at ${r.bestBpm} BPM</small></span></a>`; }).join("")}</div></section>` : ""}
   <section class="card"><h2>A 20-minute practice day</h2><p class="muted">Short daily sessions beat one long weekend session. Fingertips toughen and muscle memory forms overnight.</p>
     <div class="routine">${C.routine.map(r => `<div><b>${r[0]}</b><span>${md(r[1])}</span></div>`).join("")}</div></section>
   <div class="units">${C.units.map((u, ui) => `<article class="unit"><header><div class="eyebrow">Unit ${ui + 1} · ${u.lessons.filter(l => d.includes(l.id)).length}/${u.lessons.length} done</div><h2>${md(u.title)}</h2><p>${md(u.blurb)}</p></header>
-    <ol>${u.lessons.map((l, li) => `<li class="${d.includes(l.id) ? "done" : ""}"><a href="#l-${l.id}"><span class="dot">${d.includes(l.id) ? "✓" : li + 1}</span><span>${md(l.title)}</span><small>${l.mins} min</small></a></li>`).join("")}</ol></article>`).join("")}</div>`;
+    <ol>${u.lessons.map((l, li) => `<li class="${d.includes(l.id) ? "done" : sn.includes(l.id) ? "seen" : ""}"><a href="#l-${l.id}"><span class="dot">${d.includes(l.id) ? "✓" : li + 1}</span><span>${md(l.title)}</span><small>${l.id === lastId && !d.includes(l.id) ? "in progress" : l.mins + " min"}</small></a></li>`).join("")}</ol></article>`).join("")}</div>
+  <section class="card"><h2>Back up your progress</h2>
+    <p class="muted">Progress is saved automatically in this browser. To move it to another device or browser, copy a backup code here and paste it there.</p>
+    <div class="row"><button class="bk-copy">Copy backup code</button><button class="bk-show">Restore from a code</button><span class="hint bk-msg" aria-live="polite"></span></div>
+    <div class="bk-area" hidden><textarea id="bk-text" rows="3" style="width:100%;font:13px var(--mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px" aria-label="Backup code"></textarea>
+      <div class="row"><button class="primary bk-load">Restore this progress</button><span class="hint">This replaces the progress saved in this browser.</span></div></div></section>`;
+  const enc = () => btoa(unescape(encodeURIComponent(JSON.stringify(store.dump()))));
+  $(".bk-copy", v).onclick = async () => {
+    const code = enc(), msg = $(".bk-msg", v);
+    try { await navigator.clipboard.writeText(code); msg.textContent = "Copied. Paste it into Restore on your other device."; }
+    catch (e) { $(".bk-area", v).hidden = false; $("#bk-text").value = code; $("#bk-text").select(); msg.textContent = "Select and copy the code below."; }
+  };
+  $(".bk-show", v).onclick = () => { $(".bk-area", v).hidden = false; $("#bk-text").value = ""; $("#bk-text").focus(); };
+  $(".bk-load", v).onclick = () => {
+    const msg = $(".bk-msg", v);
+    try { const o = JSON.parse(decodeURIComponent(escape(atob($("#bk-text").value.trim()))));
+      const keys = Object.keys(o).filter(k => k.startsWith("gs-")); if (!keys.length) throw 0;
+      keys.forEach(k => localStorage.setItem(k, o[k])); home(); $(".bk-msg").textContent = "Progress restored.";
+    } catch (e) { msg.textContent = "That code didn't work. Copy the whole code again and paste it in full."; }
+  };
 }
 
 function lesson(id) {
@@ -1082,8 +1131,19 @@ function lesson(id) {
     <nav class="pager" aria-label="Lessons">${prev ? `<a class="btn" href="#l-${prev.id}">← ${md(prev.title)}</a>` : "<span></span>"}${next ? `<a class="btn" href="#l-${next.id}">${md(next.title)} →</a>` : `<a class="btn" href="#home">Course map</a>`}</nav>
   </article>`;
   const body = $(".body", v); l.body.forEach(b => body.appendChild(renderBlock(b)));
-  $$(".ready input", v).forEach((c, j) => c.onchange = () => { const s = new Set(store.get("chk-" + l.id, [])); c.checked ? s.add(j) : s.delete(j); store.set("chk-" + l.id, [...s]); });
-  $(".mark", v).onclick = () => { setDone(l.id, !isDone); if (!isDone && next) location.hash = "#l-" + next.id; else lesson(id); };
+  store.set("last", l.id); const sn = seen(); if (!sn.includes(l.id)) store.set("seen", [...sn, l.id]);
+  $$(".ready input", v).forEach((c, j) => c.onchange = () => {
+    const s = new Set(store.get("chk-" + l.id, [])); c.checked ? s.add(j) : s.delete(j); store.set("chk-" + l.id, [...s]);
+    if (s.size === l.ready.length && !done().includes(l.id)) { setDone(l.id, true); const m = $(".mark", v); m.textContent = "✓ Completed · Next lesson →"; m.classList.add("primary"); m.dataset.next = "1"; }
+  });
+  $(".mark", v).onclick = e => {
+    if (e.target.dataset.next) { if (next) location.hash = "#l-" + next.id; else location.hash = "#home"; return; }
+    setDone(l.id, !isDone); if (!isDone && next) location.hash = "#l-" + next.id; else lesson(id);
+  };
+  // remember how far down the lesson you were
+  const pos = store.get("pos", {})[l.id]; if (pos) setTimeout(() => window.scrollTo(0, pos), 60);
+  clearTimeout(window.__posT);
+  window.onscroll = () => { clearTimeout(window.__posT); window.__posT = setTimeout(() => { if (location.hash === "#l-" + l.id) { const p = store.get("pos", {}); p[l.id] = Math.round(window.scrollY); store.set("pos", p); } }, 400); };
 }
 
 function tools() {
@@ -1107,11 +1167,12 @@ function route() {
   stopAll(); stopMic(); Game.close();
   const h = location.hash.slice(1);
   $("#nav-home").classList.toggle("on", h !== "tools"); $("#nav-tools").classList.toggle("on", h === "tools");
+  window.onscroll = null; window.scrollTo(0, 0);
   if (h === "tools") tools(); else if (h.startsWith("l-")) lesson(h.slice(2)); else home();
-  window.scrollTo(0, 0);
   const t = h.startsWith("l-") && ALL.find(l => l.id === h.slice(2)); document.title = t ? `${t.title} · Practice Studio` : "Practice Studio";
 }
 window.addEventListener("hashchange", route);
+{ const last = store.get("last", null); if (!location.hash && last && ALL.some(l => l.id === last)) history.replaceState(null, "", "#l-" + last); }
 route();
 
 // ================================================================= install + offline
